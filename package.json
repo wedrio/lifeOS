@@ -1,0 +1,12 @@
+{
+  "name": "lifeos",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm --filter @lifeos/web dev",
+    "build": "pnpm --filter @lifeos/web build",
+    "typecheck": "pnpm --filter @lifeos/shared typecheck && pnpm --filter @lifeos/web typecheck",
+    "lint": "pnpm --filter @lifeos/web lint"
+  }
+}

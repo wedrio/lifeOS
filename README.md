@@ -34,6 +34,20 @@
 
 Mock 先行：第一阶段不接数据库，用 Mock 数据把全量功能跑通验收；预留 Repository 数据接口，后期统一接入真实数据库。
 
+## 本地开发
+
+```bash
+corepack enable
+pnpm install
+pnpm dev       # Web 开发服务器
+pnpm typecheck # TypeScript 契约与应用检查
+pnpm lint
+pnpm build
+```
+
 ## 状态
 
-设计阶段（MVP 未开始实现），实现路线图见 [docs/02](docs/02-程序设计与架构.md) 第 12 节。
+- ✅ **A0：工程骨架已完成** — pnpm monorepo、共享实体/Repository/Zod 契约、localStorage MockDataSource、响应式 Web 布局与完整页面路由已就绪。
+- ⏭️ **下一项：A1 记账闭环（Mock）** — 分类、账户、记一笔、流水、预算与报表。
+
+实现路线图见 [docs/02](docs/02-程序设计与架构.md) 第 12 节。
