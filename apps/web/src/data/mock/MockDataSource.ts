@@ -48,7 +48,7 @@ const timestamp = () => new Date().toISOString();
 const dateToday = (): ISODate => new Date().toISOString().slice(0, 10);
 const monthToday = () => dateToday().slice(0, 7);
 const id = () => globalThis.crypto?.randomUUID?.() ?? `mock-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const clone = <T,>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value)) as T;
 
 function base(): BaseEntity {
   const now = timestamp();
