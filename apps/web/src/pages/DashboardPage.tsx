@@ -51,7 +51,7 @@ export function DashboardPage() {
 
   return <>
     <section className="page-heading"><div><h1>今天，慢慢变好</h1><p>{now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><Space><Button icon={<ReloadOutlined />} onClick={() => void reload()} loading={loading}>刷新</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/finance/transactions?new=1')}>记一笔</Button></Space></section>
-    <Card className="dashboard-welcome" bordered={false}><div className="dashboard-welcome-row"><div><h1>你的生活，由你定义。</h1><p>从一次打卡、一笔记录，开始把想过的生活变成今天的行动。</p></div><Button ghost onClick={() => void generateAll()} loading={generating}>填充整套演示数据</Button></div></Card>
+    <Card className="dashboard-welcome" bordered={false}><div className="dashboard-welcome-row"><div className="dashboard-hero-copy"><span className="dashboard-eyebrow">LIFE CANVAS · DAILY EDITION</span><h1>今天的生活，<br />值得被认真编排。</h1><p>从一次打卡、一笔记录，开始把想过的生活变成今天的行动。</p></div><div className="dashboard-hero-aside"><div className="hero-orbit"><span>✦</span></div><Button ghost onClick={() => void generateAll()} loading={generating}>填充整套演示数据</Button></div></div></Card>
     <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
       <Col xs={24} sm={12} xl={6}><MetricCard icon={<CheckCircleOutlined />} color="#e9e8ff" label="今日计划" value={stats ? `${stats.plan.completed} / ${stats.plan.total}` : '—'} loading={loading} progress={planPercent} /></Col>
       <Col xs={24} sm={12} xl={6}><MetricCard icon={<CalendarOutlined />} color="#e1f8ef" label="习惯打卡" value={stats ? `${stats.habits.completed} / ${stats.habits.total}` : '—'} loading={loading} progress={habitPercent} /></Col>

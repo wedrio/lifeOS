@@ -1,6 +1,8 @@
-.settings-action { min-height: 172px; padding: 18px; border: 1px solid #ececf3; border-radius: 12px; background: #fafaff; }
-.settings-action > .anticon { color: #5b5ce2; font-size: 23px; }
-.settings-action h3 { margin: 10px 0 5px; font-size: 15px; }
-.settings-action p { min-height: 38px; margin: 0 0 15px; color: #77798a; font-size: 13px; line-height: 1.55; }
-.settings-action.danger > .anticon { color: #db5161; }
+.settings-action { position: relative; min-height: 176px; padding: 19px; overflow: hidden; border: 1px solid rgba(255,255,255,.68); border-radius: 15px; background: rgba(255,255,255,.29); box-shadow: inset 0 1px rgba(255,255,255,.6); transition: transform .2s ease, background .2s ease; }
+.settings-action:hover { transform: translateY(-3px); background: rgba(255,255,255,.53); }
+.settings-action::after { position: absolute; top: -24px; right: -22px; width: 80px; height: 80px; border-radius: 50%; content: ""; background: rgba(109,103,234,.10); filter: blur(5px); }
+.settings-action > .anticon { position: relative; z-index: 1; color: #6561d3; font-size: 24px; }
+.settings-action h3 { position: relative; z-index: 1; margin: 10px 0 5px; font-size: 15px; }
+.settings-action p { position: relative; z-index: 1; min-height: 38px; margin: 0 0 15px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.settings-action.danger > .anticon { color: #d95a68; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

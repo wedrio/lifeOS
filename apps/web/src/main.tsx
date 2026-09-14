@@ -16,12 +16,25 @@ function Application() {
       setTheme(settings.theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : settings.theme);
     });
   }, [setTheme]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
   return (
     <ConfigProvider
       locale={zhCN}
       theme={{
+        cssVar: true,
         algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-        token: { colorPrimary: '#5b5ce2', borderRadius: 12, fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+        token: {
+          colorPrimary: '#6966e9',
+          colorInfo: '#6966e9',
+          colorSuccess: '#47b995',
+          colorWarning: '#eea75d',
+          colorError: '#e46a7a',
+          borderRadius: 14,
+          controlHeight: 36,
+          fontFamily: '"SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif',
+        },
       }}
     >
       <BrowserRouter>
