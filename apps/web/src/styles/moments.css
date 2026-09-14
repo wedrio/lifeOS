@@ -1,0 +1,38 @@
+.moment-feed { display: grid; gap: 16px; max-width: 820px; }
+.moment-card .ant-card-body { padding: 20px; }
+.moment-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.moment-time { color: #77798a; font-size: 12px; }
+.moment-content { margin: 14px 0; color: #333446; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
+.moment-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: min(510px, 100%); margin: 13px 0; }
+.moment-images.one { grid-template-columns: minmax(0, 1fr); max-width: 510px; }
+.moment-images.two { grid-template-columns: repeat(2, 1fr); max-width: 420px; }
+.moment-images .ant-image, .moment-images .ant-image img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; }
+.moment-images.one .ant-image, .moment-images.one .ant-image img { aspect-ratio: 1.55; }
+.moment-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.moment-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+.moment-links .ant-tag { margin-inline-end: 0; }
+.moment-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 11px; border-top: 1px solid #f0f0f3; }
+.moment-image-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 17px; }
+.moment-image-edit, .moment-image-add { position: relative; width: 92px; height: 92px; overflow: hidden; border-radius: 9px; }
+.moment-image-edit .ant-image, .moment-image-edit .ant-image img { width: 100%; height: 100%; object-fit: cover; }
+.moment-image-edit > .ant-btn { position: absolute; top: 4px; right: 4px; z-index: 1; }
+.moment-image-add { display: grid; place-items: center; border: 1px dashed #c7c8df; color: #6e6f86; background: #fafafe; }
+.moment-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); overflow: hidden; border-top: 1px solid #eeeeF4; border-left: 1px solid #eeeeF4; border-radius: 10px; }
+.calendar-weekday { padding: 8px 5px; color: #77798a; background: #fafaff; border-right: 1px solid #eeeeF4; border-bottom: 1px solid #eeeeF4; font-size: 12px; text-align: center; }
+.calendar-day { position: relative; min-height: 78px; padding: 8px; border: 0; border-right: 1px solid #eeeeF4; border-bottom: 1px solid #eeeeF4; text-align: left; background: #fff; cursor: pointer; }
+.calendar-day:hover { background: #f7f7ff; }
+.calendar-day.outside { color: #b7b8c5; background: #fbfbfd; }
+.calendar-day.selected { box-shadow: inset 0 0 0 2px #5b5ce2; background: #f5f4ff; }
+.calendar-day-number { font-weight: 600; font-size: 13px; }
+.calendar-day-count { position: absolute; right: 7px; bottom: 7px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: #fff; background: #5b5ce2; font-size: 11px; }
+.calendar-moment-preview { margin-top: 16px; }
+.calendar-moment-row { padding: 10px 0; border-bottom: 1px solid #f1f1f4; }
+.calendar-moment-row:last-child { border-bottom: 0; }
+
+@media (max-width: 575px) {
+  .moment-card .ant-card-body { padding: 16px; }
+  .calendar-day { min-height: 55px; padding: 6px; }
+  .calendar-day-count { right: 4px; bottom: 4px; width: 17px; height: 17px; font-size: 10px; }
+  .calendar-weekday { padding: 6px 2px; font-size: 11px; }
+  .moment-image-edit, .moment-image-add { width: 72px; height: 72px; }
+}

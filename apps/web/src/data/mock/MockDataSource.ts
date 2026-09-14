@@ -215,12 +215,31 @@ function demoAssetsStore(store: MockStore): number {
   return assets.length;
 }
 
+
+function demoImage(left: string, right: string, label: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${left}"/><stop offset="1" stop-color="${right}"/></linearGradient></defs><rect width="1200" height="800" fill="url(#g)"/><circle cx="1000" cy="140" r="120" fill="white" fill-opacity=".16"/><text x="80" y="675" fill="white" font-family="sans-serif" font-size="72" font-weight="600">${label}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function demoMomentsStore(store: MockStore): number {
+  if (store.moments.length > 0) return 0;
+  const reference = dateToday();
+  const moments: Moment[] = [
+    { ...base(), id: 'demo-moment-today', createdAt: `${reference}T20:15:00.000Z`, updatedAt: `${reference}T20:15:00.000Z`, content: '傍晚散步的时候，天空是很温柔的蓝。把今天完成的小事记下来，明天继续。', imageUrls: [demoImage('#5b5ce2', '#79c8e8', 'Evening walk')], mood: '😊', weather: '☀️', location: '家附近', tags: ['散步', '日常'], links: store.assets.slice(0, 1).map((asset) => ({ type: 'asset' as const, id: asset.id })) },
+    { ...base(), id: 'demo-moment-yesterday', createdAt: `${shiftDate(reference, -1)}T12:20:00.000Z`, updatedAt: `${shiftDate(reference, -1)}T12:20:00.000Z`, content: '午休读完了一章书。原来认真留出半小时，也能让一天变得很充实。', imageUrls: [], mood: '😌', weather: '☁️', location: '办公室', tags: ['阅读', '工作日'], links: store.habitCheckIns.slice(0, 1).map((checkIn) => ({ type: 'habit_checkin' as const, id: checkIn.id })) },
+    { ...base(), id: 'demo-moment-weekend', createdAt: `${shiftDate(reference, -4)}T10:00:00.000Z`, updatedAt: `${shiftDate(reference, -4)}T10:00:00.000Z`, content: '周末的早晨，给自己做了一顿慢早餐。', imageUrls: [demoImage('#f4a261', '#e9c46a', 'Slow morning'), demoImage('#54c5a1', '#53a8ff', 'Weekend')], mood: '🥳', weather: '🌤️', location: '家', tags: ['周末', '美食'], links: store.transactions.slice(0, 1).map((transaction) => ({ type: 'transaction' as const, id: transaction.id })) },
+  ];
+  store.moments.push(...moments);
+  return moments.length;
+}
+
 /**
  * Browser-local implementation of the stable DataSource contract.
  * It deliberately persists the same entity shapes that the remote API will use.
  */
 export class MockDataSource implements DataSource {
   private memory: MockStore | null = null;
+  private memoryOnly = false;
 
   constructor(private readonly delayMs = 250) {}
 
@@ -229,7 +248,7 @@ export class MockDataSource implements DataSource {
   }
 
   private read(): MockStore {
-    if (typeof window === 'undefined') return this.memory ?? (this.memory = initialStore());
+    if (typeof window === 'undefined' || this.memoryOnly) return this.memory ?? (this.memory = initialStore());
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -239,6 +258,7 @@ export class MockDataSource implements DataSource {
       }
     } catch {
       // A blocked or corrupted localStorage should never block the empty shell from opening.
+      this.memoryOnly = true;
     }
     const store = initialStore();
     this.write(store);
@@ -252,6 +272,7 @@ export class MockDataSource implements DataSource {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
     } catch {
       // Keep the current in-memory session usable if storage quota/privacy settings disallow writes.
+      this.memoryOnly = true;
     }
   }
 
@@ -291,6 +312,11 @@ export class MockDataSource implements DataSource {
   /** Adds physical assets and subscriptions to an untouched asset workspace. */
   async generateAssetsDemoData(): Promise<number> {
     return this.mutate((store) => demoAssetsStore(store));
+  }
+
+  /** Adds a compact, image-inclusive timeline to an untouched moments workspace. */
+  async generateMomentsDemoData(): Promise<number> {
+    return this.mutate((store) => demoMomentsStore(store));
   }
 
   habits = {

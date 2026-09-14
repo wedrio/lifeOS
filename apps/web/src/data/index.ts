@@ -12,5 +12,6 @@ export const dataSource: DataSource = mockDataSource;
 export const generateDemoData = () => mockDataSource.generateDemoData();
 export const generateDisciplineDemoData = () => mockDataSource.generateDisciplineDemoData();
 export const generateAssetsDemoData = () => mockDataSource.generateAssetsDemoData();
+export const generateMomentsDemoData = () => mockDataSource.generateMomentsDemoData();
 
 export { MockDataSource, resetMockData } from './mock/MockDataSource';
