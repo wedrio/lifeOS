@@ -1,0 +1,40 @@
+.dashboard-welcome-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 146px; }
+.dashboard-hero-copy { position: relative; z-index: 1; }
+.dashboard-eyebrow { display: inline-block; margin-bottom: 12px; color: #56836a; font-size: 10px; font-weight: 750; letter-spacing: 1.25px; }
+.dashboard-hero-aside { display: flex; align-items: center; gap: 19px; }
+.hero-orbit { position: relative; display: grid; width: 78px; height: 78px; place-items: center; overflow: hidden; border: 1px solid rgba(47,143,80,.22); border-radius: 50%; color: #276548; background: rgba(255,255,255,.42); box-shadow: inset 0 1px rgba(255,255,255,.62); font-size: 24px; backdrop-filter: blur(8px); }
+.hero-orbit::before, .hero-orbit::after { position: absolute; border: 1px solid rgba(47,143,80,.18); border-radius: 50%; content: ""; }
+.hero-orbit::before { width: 112px; height: 38px; transform: rotate(-35deg); }
+.hero-orbit::after { width: 120px; height: 120px; }
+.hero-orbit span { position: relative; z-index: 1; text-shadow: 0 0 17px rgba(201,255,212,.72); }
+.dashboard-plan-list { display: grid; gap: 3px; }
+.dashboard-plan-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(92px, 155px) auto; align-items: center; gap: 13px; padding: 12px 6px; border-bottom: 1px solid rgba(116,117,148,.09); transition: background .18s ease; }
+.dashboard-plan-row:hover { background: rgba(255,255,255,.28); }
+.dashboard-plan-row:last-child { border-bottom: 0; }
+.dashboard-plan-row.is-completed .ant-checkbox-wrapper { color: #8a8b99; text-decoration: line-through; }
+.dashboard-plan-progress { min-width: 0; }
+.dashboard-plan-progress .ant-progress { margin: 0; }
+.dashboard-reminder-list { display: grid; gap: 8px; }
+.dashboard-reminder { display: flex; width: 100%; align-items: center; gap: 10px; padding: 11px; border: 1px solid rgba(255,255,255,.54); border-radius: 12px; color: inherit; background: rgba(255,255,255,.32); box-shadow: inset 0 1px rgba(255,255,255,.55); cursor: pointer; text-align: left; transition: transform .18s ease, background .18s ease; }
+.dashboard-reminder:hover { background: rgba(255,255,255,.62); transform: translateX(2px); }
+.dashboard-reminder.urgent { background: linear-gradient(110deg, rgba(255,240,242,.72), rgba(255,249,243,.52)); }
+.dashboard-reminder-body { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.dashboard-reminder-body strong, .dashboard-reminder-body small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-reminder-body small { color: #77798a; }
+.dashboard-moment-list { display: grid; gap: 14px; }
+.dashboard-moment-row { display: flex; align-items: flex-start; gap: 11px; padding-bottom: 13px; border-bottom: 1px solid rgba(116,117,148,.09); }
+.dashboard-moment-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.dashboard-moment-emoji { display: grid; width: 35px; height: 35px; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.62); border-radius: 12px; background: linear-gradient(135deg, rgba(231,229,255,.85), rgba(218,247,240,.74)); box-shadow: inset 0 1px rgba(255,255,255,.75); font-size: 17px; }
+.dashboard-progress-block { margin-bottom: 16px; }
+.dashboard-progress-block .ant-progress { margin: 6px 0 0; }
+
+[data-theme='dark'] .dashboard-plan-row:hover { background: rgba(255,255,255,.045); }
+[data-theme='dark'] .dashboard-reminder { border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.055); }
+[data-theme='dark'] .dashboard-reminder.urgent { background: rgba(183,72,95,.16); }
+[data-theme='dark'] .dashboard-eyebrow { color: rgba(235,255,236,.74); }
+[data-theme='dark'] .hero-orbit { border-color: rgba(255,255,255,.30); color: #f1fff0; background: rgba(255,255,255,.10); box-shadow: inset 0 1px rgba(255,255,255,.22); }
+[data-theme='dark'] .hero-orbit::before, [data-theme='dark'] .hero-orbit::after { border-color: rgba(255,255,255,.25); }
+[data-theme='dark'] .dashboard-moment-emoji { background: linear-gradient(135deg, rgba(60,170,93,.25), rgba(82,193,151,.18)); }
+
+@media (max-width: 767px) { .dashboard-hero-aside { width: 100%; justify-content: space-between; } .hero-orbit { width: 54px; height: 54px; font-size: 18px; } }
+@media (max-width: 575px) { .dashboard-welcome-row { align-items: flex-start; flex-direction: column; } .dashboard-plan-row { grid-template-columns: minmax(0, 1fr) auto; } .dashboard-plan-progress { display: none; } }

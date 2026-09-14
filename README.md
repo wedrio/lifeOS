@@ -34,6 +34,47 @@
 
 Mock 先行：第一阶段不接数据库，用 Mock 数据把全量功能跑通验收；预留 Repository 数据接口，后期统一接入真实数据库。
 
+## 本地开发
+
+```bash
+corepack enable
+pnpm install
+pnpm dev       # Web 开发服务器
+pnpm typecheck # TypeScript 契约与应用检查
+pnpm lint
+pnpm build
+```
+
 ## 状态
 
-设计阶段（MVP 未开始实现），实现路线图见 [docs/02](docs/02-程序设计与架构.md) 第 12 节。
+- ✅ **A0：工程骨架已完成** — pnpm monorepo、共享实体/Repository/Zod 契约、localStorage MockDataSource、响应式 Web 布局与完整页面路由已就绪。
+- ✅ **A1：记账闭环（Mock）已完成** — 内置与自定义分类、账户管理、收入/支出 CRUD、流水筛选、月度/分类预算、12 月趋势/分类占比/账户余额报表，以及一键演示数据。
+- ✅ **A2：自律闭环（Mock）已完成** — 习惯 CRUD、今天打卡/取消、补打限制、连续天数与年度热力图；年/月/周/日四级计划、关联上级、进度/状态/排序，以及可配置的未完成日计划自动结转。
+- ✅ **A3：资产闭环（Mock）已完成** — 实物资产与订阅 / VIP 的 CRUD、保修和到期日 30/7/3/1 分档提示、自动续费信息、实物估值与订阅月均 / 年度统计，以及演示资产。
+- ✅ **A4：日常闭环（Mock）已完成** — 时间线与按月日历浏览、文字 / 最多 9 张图片、心情 / 天气 / 地点 / 标签、关联打卡 / 账单 / 资产，以及本地图片压缩与演示日常。
+- ✅ **A5：主面板聚合与备份已完成** — 今日计划 / 习惯 / 支出 / 预算 / 到期提醒 / 最近动态总览、直接完成今日计划、全量演示数据、主题与计划偏好、Mock JSON 导入 / 导出 / 合并 / 清空。
+- 🎉 **第一阶段 A（Mock 先行）完成** — 五大板块、主面板与全量数据备份已可在本地 Mock 数据源下验收。
+
+## 第二阶段 B：真实数据源接入
+
+- 🚧 **B1 后端骨架已准备** — `apps/api` 提供 Fastify 5、统一错误包络、JWT + 刷新令牌认证服务、Prisma 身份持久化端口与 PostgreSQL 数据模型；业务资源 API 与 `RemoteDataSource` 将在后续项逐步接入。
+
+### 启动本地 API 骨架
+
+```bash
+# 1. 启动 PostgreSQL + pgvector
+
+docker compose up -d db
+
+# 2. 配置环境变量，并生成 Prisma Client / 创建数据库迁移
+cp apps/api/.env.example apps/api/.env
+pnpm prisma:generate
+pnpm --filter @lifeos/api prisma:migrate
+
+# 3. 启动 API
+pnpm dev:api
+```
+
+本地 API 健康检查为 `GET /health`；在 Prisma Client 尚未生成时健康检查仍可用，认证请求会明确返回 `503 PERSISTENCE_UNAVAILABLE`，避免误写入数据。
+
+实现路线图见 [docs/02](docs/02-程序设计与架构.md) 第 12 节。

@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HabitFrequency {
+  daily
+  weekly
+  custom
+}
+
+enum PlanLevel {
+  year
+  month
+  week
+  day
+}
+
+enum PlanStatus {
+  not_started
+  in_progress
+  completed
+  cancelled
+}
+
+enum PlanPriority {
+  low
+  medium
+  high
+}
+
+enum TransactionType {
+  expense
+  income
+}
+
+enum AssetKind {
+  physical
+  subscription
+}
+
+enum PhysicalAssetStatus {
+  in_use
+  idle
+  sold
+}
+
+enum BillingCycle {
+  monthly
+  quarterly
+  yearly
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String?
+  avatarUrl     String?
+  refreshTokens RefreshToken[]
+  habits        Habit[]
+  plans         Plan[]
+  categories    Category[]
+  accounts      Account[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  assets        Asset[]
+  moments       Moment[]
+  settings      Settings?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model Habit {
+  id                String         @id @default(cuid())
+  userId            String
+  name              String
+  icon              String         @default("✨")
+  color             String         @default("#5b5ce2")
+  frequency         HabitFrequency @default(daily)
+  timesPerPeriod    Int            @default(1)
+  reminderTime      String?
+  allowBackfillDays Int            @default(0)
+  archived          Boolean        @default(false)
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIns          HabitCheckIn[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([userId, archived])
+}
+
+model HabitCheckIn {
+  id        String   @id @default(cuid())
+  habitId   String
+  date      String   @db.VarChar(10)
+  note      String?
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([habitId, date])
+  @@index([habitId, date])
+}
+
+model Plan {
+  id          String       @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  level       PlanLevel
+  period      String       @db.VarChar(12)
+  parentId    String?
+  status      PlanStatus   @default(not_started)
+  progress    Int          @default(0)
+  priority    PlanPriority @default(medium)
+  order       Int          @default(0)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      Plan?        @relation("PlanHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Plan[]       @relation("PlanHierarchy")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId, level, period])
+  @@index([parentId])
+}
+
+model Category {
+  id       String          @id @default(cuid())
+  userId   String
+  name     String
+  icon     String          @default("🏷️")
+  color    String          @default("#5b5ce2")
+  type     TransactionType
+  parentId String?
+  isSystem Boolean         @default(false)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Category?       @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[]      @relation("CategoryHierarchy")
+  transactions Transaction[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([userId, type])
+  @@index([parentId])
+}
+
+model Account {
+  id             String        @id @default(cuid())
+  userId         String
+  name           String
+  icon           String        @default("💳")
+  initialBalance Int           @default(0)
+  archived       Boolean       @default(false)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId, archived])
+}
+
+model Transaction {
+  id         String          @id @default(cuid())
+  userId     String
+  type       TransactionType
+  amount     Int
+  categoryId String
+  accountId  String
+  date       String          @db.VarChar(10)
+  note       String?
+  tags       Json            @default("[]")
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account    Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([userId, date])
+  @@index([categoryId])
+  @@index([accountId])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  userId     String
+  period     String   @db.VarChar(7)
+  total      Int
+  byCategory Json     @default("{}")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, period])
+}
+
+model Asset {
+  id             String              @id @default(cuid())
+  userId         String
+  kind           AssetKind
+  name           String
+  icon           String              @default("📦")
+  category       String
+  brand          String?
+  model          String?
+  serialNo       String?
+  purchaseDate   String?             @db.VarChar(10)
+  purchasePrice  Int?
+  warrantyUntil  String?             @db.VarChar(10)
+  estimatedValue Int?
+  status         PhysicalAssetStatus?
+  price          Int?
+  billingCycle   BillingCycle?
+  startDate      String?             @db.VarChar(10)
+  expireDate     String?             @db.VarChar(10)
+  autoRenew      Boolean?
+  accountNote    String?
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([userId, kind])
+  @@index([userId, expireDate])
+  @@index([userId, warrantyUntil])
+}
+
+model Moment {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String   @db.Text
+  imageUrls Json     @default("[]")
+  mood      String?
+  weather   String?
+  location  String?
+  tags      Json     @default("[]")
+  links     Json     @default("[]")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model Settings {
+  userId                       String   @id
+  currency                     String   @default("CNY")
+  theme                        String   @default("system")
+  weekStartsOn                 Int      @default(1)
+  autoRollOverIncompletePlans  Boolean  @default(true)
+  user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+}
