@@ -53,14 +53,46 @@ function base(): BaseEntity {
   return { id: id(), userId: USER_ID, createdAt: now, updatedAt: now };
 }
 
+function systemEntity<T extends object>(entityId: string, value: T): T & BaseEntity {
+  const now = timestamp();
+  return { ...value, id: entityId, userId: USER_ID, createdAt: now, updatedAt: now };
+}
+
+function defaultCategories(): Category[] {
+  const expense = [
+    ['dining', '餐饮', '🍜', '#f08c53'], ['transport', '交通', '🚇', '#5d9cec'],
+    ['shopping', '购物', '🛍️', '#dd6b9a'], ['housing', '居住', '🏠', '#8a6fdf'],
+    ['entertainment', '娱乐', '🎮', '#a86bdb'], ['medical', '医疗', '💊', '#e67373'],
+    ['learning', '学习', '📚', '#5ab99a'], ['social', '人情', '🎁', '#d79463'],
+    ['other-expense', '其他', '📌', '#87909f'],
+  ] as const;
+  const income = [
+    ['salary', '工资', '💼', '#47a878'], ['investment', '理财', '📈', '#5b8ff9'],
+    ['part-time', '兼职', '✨', '#c58c32'], ['other-income', '其他', '📌', '#87909f'],
+  ] as const;
+  return [
+    ...expense.map(([suffix, name, icon, color]) => systemEntity(`category-${suffix}`, { name, icon, color, type: 'expense' as const, isSystem: true })),
+    ...income.map(([suffix, name, icon, color]) => systemEntity(`category-${suffix}`, { name, icon, color, type: 'income' as const, isSystem: true })),
+  ];
+}
+
+function defaultAccounts(): Account[] {
+  return [
+    systemEntity('account-cash', { name: '现金', icon: '💵', initialBalance: 0, archived: false }),
+    systemEntity('account-alipay', { name: '支付宝', icon: '🔵', initialBalance: 0, archived: false }),
+    systemEntity('account-wechat', { name: '微信', icon: '🟢', initialBalance: 0, archived: false }),
+    systemEntity('account-bank', { name: '银行卡', icon: '💳', initialBalance: 0, archived: false }),
+  ];
+}
+
 function initialStore(): MockStore {
   const now = timestamp();
   return {
     habits: [],
     habitCheckIns: [],
     plans: [],
-    categories: [],
-    accounts: [],
+    categories: defaultCategories(),
+    accounts: defaultAccounts(),
     transactions: [],
     budgets: [],
     assets: [],
@@ -75,6 +107,43 @@ function initialStore(): MockStore {
       weekStartsOn: 1,
     },
   };
+}
+
+/** Brings the empty A0 localStorage shape forward without overwriting user finance data. */
+function migrateFinanceDefaults(store: MockStore): boolean {
+  const untouchedFinance = store.categories.length === 0 && store.accounts.length === 0 && store.transactions.length === 0 && store.budgets.length === 0;
+  if (!untouchedFinance) return false;
+  store.categories = defaultCategories();
+  store.accounts = defaultAccounts();
+  return true;
+}
+
+function ensureFinanceCatalog(store: MockStore) {
+  if (store.categories.length === 0) store.categories = defaultCategories();
+  if (store.accounts.length === 0) store.accounts = defaultAccounts();
+}
+
+function shiftMonth(period: string, offset: number): string {
+  const [year, month] = period.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function dateInMonth(period: string, day: number): ISODate {
+  return `${period}-${String(day).padStart(2, '0')}`;
+}
+
+function demoTransactions(): Transaction[] {
+  const demos: Transaction[] = [];
+  const periods = Array.from({ length: 12 }, (_, index) => shiftMonth(monthToday(), index - 11));
+  periods.forEach((period, index) => {
+    const salary: Transaction = { ...base(), type: 'income', amount: 1800000 + (index % 3) * 50000, categoryId: 'category-salary', accountId: 'account-bank', date: dateInMonth(period, 8), note: '工资收入', tags: ['固定收入'] };
+    const dining: Transaction = { ...base(), type: 'expense', amount: 12000 + (index % 4) * 1800, categoryId: 'category-dining', accountId: 'account-alipay', date: dateInMonth(period, 12), note: '日常餐饮', tags: ['日常'] };
+    const transport: Transaction = { ...base(), type: 'expense', amount: 4200 + (index % 3) * 600, categoryId: 'category-transport', accountId: 'account-wechat', date: dateInMonth(period, 18), note: '通勤交通', tags: ['通勤'] };
+    const entertainment: Transaction = { ...base(), type: 'expense', amount: 6500 + (index % 5) * 900, categoryId: 'category-entertainment', accountId: 'account-alipay', date: dateInMonth(period, 23), note: '放松一下', tags: ['生活'] };
+    demos.push(salary, dining, transport, entertainment);
+  });
+  return demos;
 }
 
 /**
@@ -94,7 +163,11 @@ export class MockDataSource implements DataSource {
     if (typeof window === 'undefined') return this.memory ?? (this.memory = initialStore());
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) as MockStore;
+      if (raw) {
+        const store = JSON.parse(raw) as MockStore;
+        if (migrateFinanceDefaults(store)) this.write(store);
+        return store;
+      }
     } catch {
       // A blocked or corrupted localStorage should never block the empty shell from opening.
     }
@@ -128,6 +201,17 @@ export class MockDataSource implements DataSource {
 
   private touch<T extends BaseEntity>(entity: T, patch: object): T {
     return Object.assign(entity, patch, { updatedAt: timestamp() }) as T;
+  }
+
+  /** Adds a non-destructive, 12-month data set to an untouched finance workspace. */
+  async generateDemoData(): Promise<number> {
+    return this.mutate((store) => {
+      if (store.transactions.length > 0) return 0;
+      ensureFinanceCatalog(store);
+      const transactions = demoTransactions();
+      store.transactions.push(...transactions);
+      return transactions.length;
+    });
   }
 
   habits = {
@@ -204,6 +288,8 @@ export class MockDataSource implements DataSource {
       return this.touch(entity, patch);
     }),
     removeCategory: (categoryId: string) => this.mutate((store) => {
+      const category = store.categories.find((item) => item.id === categoryId);
+      if (category?.isSystem) throw new Error('内置分类不能删除');
       if (store.transactions.some((item) => item.categoryId === categoryId)) throw new Error('已有账单使用该分类，无法删除');
       store.categories = store.categories.filter((item) => item.id !== categoryId);
     }),
@@ -323,7 +409,7 @@ export class MockDataSource implements DataSource {
           budgetSpent: total(expenses.filter((item) => item.date.startsWith(month))),
         },
         expiringAssets,
-        recentMoments: store.moments.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3),
+        recentMoments: [...store.moments].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3),
       };
     }),
     finance: (month = monthToday()) => this.query((store) => {
@@ -343,7 +429,7 @@ export class MockDataSource implements DataSource {
           category,
           amount: sum(transactions.filter((item) => item.categoryId === category.id && item.type === 'expense')),
         })).filter((item) => item.amount > 0),
-        monthlyTrend: [month].map((period) => ({
+        monthlyTrend: Array.from({ length: 12 }, (_, index) => shiftMonth(month, index - 11)).map((period) => ({
           period,
           income: sum(store.transactions.filter((item) => item.type === 'income' && item.date.startsWith(period))),
           expense: sum(store.transactions.filter((item) => item.type === 'expense' && item.date.startsWith(period))),

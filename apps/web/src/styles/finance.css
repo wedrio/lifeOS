@@ -1,0 +1,34 @@
+.finance-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.finance-filters { display: flex; flex: 1; flex-wrap: wrap; gap: 8px; }
+.finance-filters .ant-select { min-width: 116px; }
+.finance-date-filter { width: 138px; }
+.finance-summary { margin-bottom: 16px; }
+.finance-summary .ant-card-body { padding: 18px 20px; }
+.finance-summary-label { display: block; margin-bottom: 5px; color: #77798a; font-size: 13px; }
+.transaction-expense { color: #db5161; font-weight: 650; }
+.transaction-income { color: #23936d; font-weight: 650; }
+.transaction-note { color: #77798a; font-size: 12px; }
+.drawer-action { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
+.budget-category-row { display: grid; grid-template-columns: minmax(145px, 1fr) minmax(135px, .7fr) minmax(138px, .7fr); align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid #f0f0f3; }
+.budget-category-row:last-child { border-bottom: 0; }
+.budget-category-spend { color: #77798a; text-align: right; font-size: 13px; }
+.chart-shell { position: relative; min-height: 230px; padding: 16px 4px 0; }
+.trend-chart { width: 100%; height: 220px; overflow: visible; }
+.donut-layout { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 26px; min-height: 230px; }
+.donut { width: 160px; height: 160px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; }
+.donut-center { width: 108px; height: 108px; display: grid; place-items: center; align-content: center; border-radius: 50%; background: var(--ant-color-bg-container); text-align: center; }
+.donut-legend { width: min(280px, 100%); }
+.donut-legend-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; font-size: 13px; }
+.legend-title { display: flex; align-items: center; min-width: 0; gap: 7px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.legend-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.empty-chart { min-height: 210px; display: grid; place-items: center; color: #9293a4; }
+
+@media (max-width: 575px) {
+  .finance-toolbar { align-items: stretch; }
+  .finance-filters { width: 100%; }
+  .finance-filters .ant-select, .finance-date-filter { flex: 1 1 42%; min-width: 0; }
+  .finance-toolbar > .ant-space { justify-content: flex-end; }
+  .budget-category-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .budget-category-spend { grid-column: 1 / -1; text-align: left; }
+}

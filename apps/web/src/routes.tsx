@@ -2,6 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layout/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { FeaturePlaceholder } from './pages/FeaturePlaceholder';
+import { FinanceTransactionsPage } from './pages/FinanceTransactionsPage';
+import { BudgetPage } from './pages/BudgetPage';
+import { FinanceStatsPage } from './pages/FinanceStatsPage';
 
 const features = {
   habits: { emoji: '🎯', title: '习惯打卡', description: '建立习惯、完成打卡并看见坚持的轨迹。', nextStage: 'A2 · 自律闭环' },
@@ -19,9 +22,10 @@ export function AppRoutes() {
     <Route path="/" element={<DashboardPage />} />
     <Route path="/discipline/habits" element={<FeaturePlaceholder {...features.habits} />} />
     <Route path="/discipline/plans" element={<FeaturePlaceholder {...features.plans} />} />
-    <Route path="/finance/transactions" element={<FeaturePlaceholder {...features.transactions} />} />
-    <Route path="/finance/budget" element={<FeaturePlaceholder {...features.budget} />} />
-    <Route path="/finance/stats" element={<FeaturePlaceholder {...features.stats} />} />
+    <Route path="/finance" element={<Navigate to="/finance/transactions" replace />} />
+    <Route path="/finance/transactions" element={<FinanceTransactionsPage />} />
+    <Route path="/finance/budget" element={<BudgetPage />} />
+    <Route path="/finance/stats" element={<FinanceStatsPage />} />
     <Route path="/assets" element={<FeaturePlaceholder {...features.assets} />} />
     <Route path="/moments" element={<FeaturePlaceholder {...features.moments} />} />
     <Route path="/settings" element={<FeaturePlaceholder {...features.settings} />} />
