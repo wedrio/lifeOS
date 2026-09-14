@@ -81,7 +81,7 @@ export function HabitsPage() {
     </section>
 
     <Row gutter={[16, 16]} className="discipline-summary">
-      <Col xs={24} md={14}><Card><Typography.Text type="secondary">今日打卡进度</Typography.Text><Typography.Title level={2} style={{ margin: '4px 0 0' }}>{checkedToday} <Typography.Text type="secondary">/ {activeHabits.length}</Typography.Text></Typography.Title><Progress percent={activeHabits.length ? Math.round(checkedToday / activeHabits.length * 100) : 0} showInfo={false} strokeColor="#5b5ce2" /></Card></Col>
+      <Col xs={24} md={14}><Card><Typography.Text type="secondary">今日打卡进度</Typography.Text><Typography.Title level={2} style={{ margin: '4px 0 0' }}>{checkedToday} <Typography.Text type="secondary">/ {activeHabits.length}</Typography.Text></Typography.Title><Progress percent={activeHabits.length ? Math.round(checkedToday / activeHabits.length * 100) : 0} showInfo={false} strokeColor="#2f9c67" /></Card></Col>
       <Col xs={24} md={10}><Card><Typography.Text type="secondary">今天</Typography.Text><Typography.Title level={3} style={{ margin: '7px 0 0' }}>{new Date(`${today()}T12:00:00Z`).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long', timeZone: 'UTC' })}</Typography.Title><Typography.Text type="secondary">点击「完成」即可记录今天的坚持</Typography.Text></Card></Col>
     </Row>
 

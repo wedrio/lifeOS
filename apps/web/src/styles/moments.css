@@ -19,15 +19,15 @@
 .moment-image-edit { border: 1px solid rgba(255,255,255,.7); box-shadow: 0 5px 13px rgba(55,56,91,.10); }
 .moment-image-edit .ant-image, .moment-image-edit .ant-image img { width: 100%; height: 100%; object-fit: cover; }
 .moment-image-edit > .ant-btn { position: absolute; top: 4px; right: 4px; z-index: 1; }
-.moment-image-add { display: grid; place-items: center; border: 1px dashed rgba(105,102,233,.38); color: #6661d1; background: rgba(237,236,255,.52); }
+.moment-image-add { display: grid; place-items: center; border: 1px dashed rgba(51,157,91,.38); color: #23764b; background: rgba(226,247,229,.62); }
 .moment-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); overflow: hidden; border: 1px solid rgba(255,255,255,.75); border-radius: 14px; background: rgba(255,255,255,.28); }
 .calendar-weekday { padding: 9px 5px; border-right: 1px solid rgba(116,117,148,.08); border-bottom: 1px solid rgba(116,117,148,.09); color: var(--muted); background: rgba(248,248,255,.48); font-size: 12px; font-weight: 650; text-align: center; }
 .calendar-day { position: relative; min-height: 78px; padding: 8px; border: 0; border-right: 1px solid rgba(116,117,148,.08); border-bottom: 1px solid rgba(116,117,148,.09); color: inherit; text-align: left; background: rgba(255,255,255,.20); cursor: pointer; transition: background .18s ease; }
 .calendar-day:hover { background: rgba(255,255,255,.58); }
 .calendar-day.outside { color: #b7b8c5; background: rgba(255,255,255,.10); }
-.calendar-day.selected { box-shadow: inset 0 0 0 2px #6e68e8; background: rgba(235,233,255,.65); }
+.calendar-day.selected { box-shadow: inset 0 0 0 2px #3ca868; background: rgba(221,245,225,.72); }
 .calendar-day-number { font-weight: 650; font-size: 13px; }
-.calendar-day-count { position: absolute; right: 7px; bottom: 7px; display: grid; width: 20px; height: 20px; place-items: center; border: 1px solid rgba(255,255,255,.58); border-radius: 50%; color: #fff; background: linear-gradient(135deg, #7770ed, #59c8ba); box-shadow: 0 4px 8px rgba(88,89,200,.22); font-size: 11px; }
+.calendar-day-count { position: absolute; right: 7px; bottom: 7px; display: grid; width: 20px; height: 20px; place-items: center; border: 1px solid rgba(255,255,255,.58); border-radius: 50%; color: #fff; background: linear-gradient(135deg, #69c878, #3ba989); box-shadow: 0 4px 8px rgba(47,143,87,.22); font-size: 11px; }
 .calendar-moment-preview { margin-top: 16px; }
 .calendar-moment-row { padding: 11px 0; border-bottom: 1px solid rgba(116,117,148,.09); }
 .calendar-moment-row:last-child { border-bottom: 0; }

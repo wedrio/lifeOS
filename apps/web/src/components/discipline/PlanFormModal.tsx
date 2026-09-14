@@ -61,7 +61,7 @@ export function PlanFormModal({ plan, plans, defaultLevel, defaultPlanPeriod, op
       {level !== 'year' && <Form.Item name="parentId" label="关联上级（可选）"><Select allowClear showSearch optionFilterProp="label" placeholder="不关联上级计划" options={parentOptions} /></Form.Item>}
       <div className="form-two-columns"><Form.Item name="priority" label="优先级" rules={[{ required: true }]}><Segmented block options={[{ label: '低', value: 'low' }, { label: '中', value: 'medium' }, { label: '高', value: 'high' }]} /></Form.Item><Form.Item name="status" label="状态" rules={[{ required: true }]}><Select options={[{ label: '待开始', value: 'not_started' }, { label: '进行中', value: 'in_progress' }, { label: '已完成', value: 'completed' }, { label: '已取消', value: 'cancelled' }]} onChange={(next) => { if (next === 'completed') form.setFieldValue('progress', 100); }} /></Form.Item></div>
       <Form.Item name="progress" label={`进度 ${status === 'completed' ? '（已完成）' : ''}`} rules={[{ required: true }]}><InputNumber min={0} max={100} precision={0} suffix="%" style={{ width: '100%' }} /></Form.Item>
-      <Progress percent={Math.min(100, progress)} showInfo={false} strokeColor="#5b5ce2" />
+      <Progress percent={Math.min(100, progress)} showInfo={false} strokeColor="#2f9c67" />
       <div className="modal-footer" style={{ marginTop: 24 }}><Button onClick={onClose}>取消</Button><Button type="primary" htmlType="submit">保存计划</Button></div>
     </Form>
   </Modal>;

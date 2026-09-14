@@ -24,7 +24,7 @@ export function HabitFormModal({ habit, open, onClose, onSaved }: { habit?: Habi
     form.setFieldsValue({
       name: habit?.name,
       icon: habit?.icon ?? '✨',
-      color: habit?.color ?? '#5b5ce2',
+      color: habit?.color ?? '#2f9c67',
       frequency: habit?.frequency ?? 'daily',
       timesPerPeriod: habit?.timesPerPeriod ?? 1,
       reminderTime: habit?.reminderTime,
@@ -47,7 +47,7 @@ export function HabitFormModal({ habit, open, onClose, onSaved }: { habit?: Habi
   };
 
   return <Modal open={open} title={habit ? '编辑习惯' : '新建习惯'} onCancel={onClose} footer={null} destroyOnClose>
-    <Form form={form} layout="vertical" onFinish={save} initialValues={{ icon: '✨', color: '#5b5ce2', frequency: 'daily', timesPerPeriod: 1, allowBackfillDays: 0, archived: false }}>
+    <Form form={form} layout="vertical" onFinish={save} initialValues={{ icon: '✨', color: '#2f9c67', frequency: 'daily', timesPerPeriod: 1, allowBackfillDays: 0, archived: false }}>
       <Form.Item name="name" label="习惯名称" rules={[{ required: true, message: '请输入习惯名称' }]}><Input placeholder="例如：阅读 30 分钟" maxLength={80} autoFocus /></Form.Item>
       <div className="form-two-columns"><Form.Item name="icon" label="图标" rules={[{ required: true }]}><Input maxLength={8} /></Form.Item><Form.Item name="color" label="主题色" rules={[{ required: true }]}><Input type="color" style={{ height: 32 }} /></Form.Item></div>
       <Form.Item name="frequency" label="目标频率" rules={[{ required: true }]}><Segmented block options={[{ label: '每天', value: 'daily' }, { label: '每周', value: 'weekly' }, { label: '自定义', value: 'custom' }]} /></Form.Item>

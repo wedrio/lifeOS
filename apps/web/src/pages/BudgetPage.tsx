@@ -70,7 +70,7 @@ export function BudgetPage() {
     </section>
 
     <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-      <Col xs={24} md={10}><Card><span className="finance-summary-label">本月预算进度</span>{loading ? <Skeleton active paragraph={{ rows: 1 }} /> : <><Typography.Title level={2} style={{ margin: '0 0 2px' }}>{total > 0 ? `${Math.max(0, percent)}%` : '未设置'}</Typography.Title><Typography.Text type="secondary">已支出 {formatCents(spent)} {total > 0 && `／预算 ${formatCents(total)}`}</Typography.Text><Progress percent={Math.min(percent, 100)} showInfo={false} status={percent > 100 ? 'exception' : 'normal'} strokeColor={percent > 100 ? '#db5161' : '#5b5ce2'} style={{ marginTop: 18 }} /></>}</Card></Col>
+      <Col xs={24} md={10}><Card><span className="finance-summary-label">本月预算进度</span>{loading ? <Skeleton active paragraph={{ rows: 1 }} /> : <><Typography.Title level={2} style={{ margin: '0 0 2px' }}>{total > 0 ? `${Math.max(0, percent)}%` : '未设置'}</Typography.Title><Typography.Text type="secondary">已支出 {formatCents(spent)} {total > 0 && `／预算 ${formatCents(total)}`}</Typography.Text><Progress percent={Math.min(percent, 100)} showInfo={false} status={percent > 100 ? 'exception' : 'normal'} strokeColor={percent > 100 ? '#db5161' : '#2f9c67'} style={{ marginTop: 18 }} /></>}</Card></Col>
       <Col xs={12} md={7}><Card><Statistic title="本月支出" value={spent / 100} precision={2} prefix="¥" valueStyle={{ color: '#db5161' }} /></Card></Col>
       <Col xs={12} md={7}><Card><Statistic title={remaining >= 0 ? '剩余可用' : '已超支'} value={Math.abs(remaining) / 100} precision={2} prefix="¥" valueStyle={{ color: remaining < 0 ? '#db5161' : '#23936d' }} /></Card></Col>
     </Row>

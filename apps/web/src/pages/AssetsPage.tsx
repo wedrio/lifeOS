@@ -52,7 +52,7 @@ export function AssetsPage() {
   return <>
     <section className="page-heading"><div><h1>资产登记</h1><p>让设备、保修和订阅到期日都清楚可见。</p></div><Space wrap><Button onClick={() => void seedDemo()}>填充演示数据</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor()}>登记资产</Button></Space></section>
     <Row gutter={[16, 16]} className="asset-summary">
-      <Col xs={24} sm={8}><Card><span className="asset-summary-label">实物资产当前估值</span><Statistic value={estimatedValue / 100} precision={2} prefix="¥" valueStyle={{ color: '#5b5ce2' }} /><Typography.Text type="secondary">{physicalAssets.filter((asset) => asset.status !== 'sold').length} 项在册设备</Typography.Text></Card></Col>
+      <Col xs={24} sm={8}><Card><span className="asset-summary-label">实物资产当前估值</span><Statistic value={estimatedValue / 100} precision={2} prefix="¥" valueStyle={{ color: '#2f9c67' }} /><Typography.Text type="secondary">{physicalAssets.filter((asset) => asset.status !== 'sold').length} 项在册设备</Typography.Text></Card></Col>
       <Col xs={12} sm={8}><Card><span className="asset-summary-label">月均订阅支出</span><Statistic value={monthlySubscription / 100} precision={2} prefix="¥" valueStyle={{ color: '#e76f8a' }} /><Typography.Text type="secondary">{subscriptions.length} 项订阅</Typography.Text></Card></Col>
       <Col xs={12} sm={8}><Card><span className="asset-summary-label">年度订阅支出</span><Statistic value={annualSubscription / 100} precision={2} prefix="¥" valueStyle={{ color: '#f09a45' }} /><Typography.Text type="secondary"><WarningOutlined /> 30 天内到期 {expiring} 项</Typography.Text></Card></Col>
     </Row>

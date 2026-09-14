@@ -1,6 +1,6 @@
 .discipline-summary { margin-bottom: 16px; }
 .discipline-summary .ant-card { position: relative; }
-.discipline-summary .ant-card:first-child::after { position: absolute; top: -28px; right: 24px; width: 86px; height: 86px; border-radius: 50%; content: ""; background: rgba(116,108,240,.14); filter: blur(13px); }
+.discipline-summary .ant-card:first-child::after { position: absolute; top: -28px; right: 24px; width: 86px; height: 86px; border-radius: 50%; content: ""; background: rgba(91,185,111,.16); filter: blur(13px); }
 .discipline-summary .ant-card-body { padding: 17px 20px; }
 .habit-card { height: 100%; overflow: hidden; border: 1px solid rgba(255,255,255,.75) !important; }
 .habit-card.is-selected { border-color: color-mix(in srgb, var(--habit-color) 55%, white) !important; box-shadow: 0 17px 35px color-mix(in srgb, var(--habit-color) 18%, transparent) !important; }
