@@ -55,6 +55,26 @@ pnpm build
 - ✅ **A5：主面板聚合与备份已完成** — 今日计划 / 习惯 / 支出 / 预算 / 到期提醒 / 最近动态总览、直接完成今日计划、全量演示数据、主题与计划偏好、Mock JSON 导入 / 导出 / 合并 / 清空。
 - 🎉 **第一阶段 A（Mock 先行）完成** — 五大板块、主面板与全量数据备份已可在本地 Mock 数据源下验收。
 
-下一阶段将按架构文档进入 **B1：Fastify + Prisma + PostgreSQL API 骨架与认证**。
+## 第二阶段 B：真实数据源接入
+
+- 🚧 **B1 后端骨架已准备** — `apps/api` 提供 Fastify 5、统一错误包络、JWT + 刷新令牌认证服务、Prisma 身份持久化端口与 PostgreSQL 数据模型；业务资源 API 与 `RemoteDataSource` 将在后续项逐步接入。
+
+### 启动本地 API 骨架
+
+```bash
+# 1. 启动 PostgreSQL + pgvector
+
+docker compose up -d db
+
+# 2. 配置环境变量，并生成 Prisma Client / 创建数据库迁移
+cp apps/api/.env.example apps/api/.env
+pnpm prisma:generate
+pnpm --filter @lifeos/api prisma:migrate
+
+# 3. 启动 API
+pnpm dev:api
+```
+
+本地 API 健康检查为 `GET /health`；在 Prisma Client 尚未生成时健康检查仍可用，认证请求会明确返回 `503 PERSISTENCE_UNAVAILABLE`，避免误写入数据。
 
 实现路线图见 [docs/02](docs/02-程序设计与架构.md) 第 12 节。

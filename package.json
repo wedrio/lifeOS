@@ -5,8 +5,10 @@
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "pnpm --filter @lifeos/web dev",
-    "build": "pnpm --filter @lifeos/web build",
-    "typecheck": "pnpm --filter @lifeos/shared typecheck && pnpm --filter @lifeos/web typecheck",
-    "lint": "pnpm --filter @lifeos/web lint"
+    "dev:api": "pnpm --filter @lifeos/api dev",
+    "build": "pnpm --filter @lifeos/web build && pnpm --filter @lifeos/api build",
+    "typecheck": "pnpm --filter @lifeos/shared typecheck && pnpm --filter @lifeos/web typecheck && pnpm --filter @lifeos/api typecheck",
+    "lint": "pnpm --filter @lifeos/web lint && pnpm --filter @lifeos/api lint",
+    "prisma:generate": "pnpm --filter @lifeos/api prisma:generate"
   }
 }
