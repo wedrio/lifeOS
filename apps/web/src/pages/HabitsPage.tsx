@@ -3,6 +3,7 @@ import { Button, Card, Col, Empty, Popconfirm, Progress, Row, Segmented, Skeleto
 import { CheckOutlined, DeleteOutlined, EditOutlined, FireOutlined, PlusOutlined } from '@ant-design/icons';
 import type { Habit, HabitCheckIn, ISODate } from '@lifeos/shared';
 import { dataSource, generateDisciplineDemoData } from '../data';
+import { useSearchParams } from 'react-router-dom';
 import { calculateHabitStats, today } from '../lib/dates';
 import { HabitFormModal } from '../components/discipline/HabitFormModal';
 import { HabitHeatmap } from '../components/discipline/HabitHeatmap';
@@ -21,6 +22,14 @@ export function HabitsPage() {
   const [selectedId, setSelectedId] = useState<string>();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Habit | undefined>();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    setEditing(undefined);
+    setEditorOpen(true);
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const reload = useCallback(async () => {
     setLoading(true);

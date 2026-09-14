@@ -13,5 +13,6 @@ export const generateDemoData = () => mockDataSource.generateDemoData();
 export const generateDisciplineDemoData = () => mockDataSource.generateDisciplineDemoData();
 export const generateAssetsDemoData = () => mockDataSource.generateAssetsDemoData();
 export const generateMomentsDemoData = () => mockDataSource.generateMomentsDemoData();
+export const generateAllDemoData = () => mockDataSource.generateAllDemoData();
 
 export { MockDataSource, resetMockData } from './mock/MockDataSource';

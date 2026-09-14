@@ -2,7 +2,7 @@ import type {
   Account, AccountInput, Asset, AssetInput, Budget, BudgetInput,
   Category, CategoryInput, DashboardStats, FinanceStats, Habit, HabitCheckIn, HabitInput,
   ISODate, Moment, MomentFilter, MomentInput, Plan, PlanFilter, PlanInput, Settings,
-  SettingsInput, Transaction, TransactionFilter, TransactionInput,
+  SettingsInput, Transaction, TransactionFilter, TransactionInput, BackupImportMode, BackupPayload,
 } from './types';
 
 export interface HabitRepository {
@@ -65,6 +65,12 @@ export interface StatsRepository {
   finance(month?: string): Promise<FinanceStats>;
 }
 
+export interface BackupRepository {
+  exportData(): Promise<BackupPayload>;
+  importData(payload: BackupPayload, mode: BackupImportMode): Promise<void>;
+  clear(): Promise<void>;
+}
+
 export interface DataSource {
   habits: HabitRepository;
   plans: PlanRepository;
@@ -73,4 +79,5 @@ export interface DataSource {
   moments: MomentRepository;
   settings: SettingsRepository;
   stats: StatsRepository;
+  backup: BackupRepository;
 }

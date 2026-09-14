@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
+import { dataSource } from '../data';
 
 const { Sider, Header, Content } = Layout;
 
@@ -64,7 +65,12 @@ function MobileNavigation() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const theme = useUIStore((state) => state.theme);
-  const toggleTheme = useUIStore((state) => state.toggleTheme);
+  const setTheme = useUIStore((state) => state.setTheme);
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    void dataSource.settings.update({ theme: next });
+  };
   const mobileMenuOpen = useUIStore((state) => state.mobileMenuOpen);
   const setMobileMenuOpen = useUIStore((state) => state.setMobileMenuOpen);
 

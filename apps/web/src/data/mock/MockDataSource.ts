@@ -3,6 +3,8 @@ import type {
   AccountInput,
   Asset,
   AssetInput,
+  BackupImportMode,
+  BackupPayload,
   BaseEntity,
   Budget,
   BudgetInput,
@@ -233,6 +235,24 @@ function demoMomentsStore(store: MockStore): number {
   return moments.length;
 }
 
+
+const backupArrayKeys = ['habits', 'habitCheckIns', 'plans', 'categories', 'accounts', 'transactions', 'budgets', 'assets', 'moments'] as const;
+
+function isBackupPayload(value: unknown): value is BackupPayload {
+  if (!value || typeof value !== 'object') return false;
+  const payload = value as Partial<BackupPayload>;
+  if (payload.version !== 1 || !payload.data || typeof payload.data !== 'object') return false;
+  const data = payload.data as Record<string, unknown>;
+  const hasBaseEntity = (item: unknown) => Boolean(item && typeof item === 'object' && typeof (item as BaseEntity).id === 'string' && typeof (item as BaseEntity).userId === 'string' && typeof (item as BaseEntity).createdAt === 'string' && typeof (item as BaseEntity).updatedAt === 'string');
+  return backupArrayKeys.every((key) => Array.isArray(data[key]) && (data[key] as unknown[]).every(hasBaseEntity)) && hasBaseEntity(data.settings);
+}
+
+function mergeById<T extends BaseEntity>(current: T[], incoming: T[]): T[] {
+  const map = new Map(current.map((item) => [item.id, item]));
+  incoming.forEach((item) => map.set(item.id, item));
+  return [...map.values()];
+}
+
 /**
  * Browser-local implementation of the stable DataSource contract.
  * It deliberately persists the same entity shapes that the remote API will use.
@@ -317,6 +337,23 @@ export class MockDataSource implements DataSource {
   /** Adds a compact, image-inclusive timeline to an untouched moments workspace. */
   async generateMomentsDemoData(): Promise<number> {
     return this.mutate((store) => demoMomentsStore(store));
+  }
+
+  /** Generates every domain's demo data in dependency order, without overwriting existing records. */
+  async generateAllDemoData(): Promise<number> {
+    return this.mutate((store) => {
+      let created = 0;
+      if (store.transactions.length === 0) {
+        ensureFinanceCatalog(store);
+        const transactions = demoTransactions();
+        store.transactions.push(...transactions);
+        created += transactions.length;
+      }
+      created += demoDisciplineStore(store);
+      created += demoAssetsStore(store);
+      created += demoMomentsStore(store);
+      return created;
+    });
   }
 
   habits = {
@@ -504,9 +541,36 @@ export class MockDataSource implements DataSource {
     update: (patch: Partial<SettingsInput>) => this.mutate((store) => this.touch(store.settings, patch)),
   };
 
+  backup = {
+    exportData: () => this.query((store) => ({ version: 1 as const, exportedAt: timestamp(), data: clone(store) })),
+    importData: (payload: BackupPayload, mode: BackupImportMode) => this.mutate((store) => {
+      if (!isBackupPayload(payload)) throw new Error('备份文件格式无效或版本不受支持');
+      const incoming = clone(payload.data);
+      if (mode === 'replace') {
+        Object.assign(store, incoming);
+      } else {
+        store.habits = mergeById(store.habits, incoming.habits);
+        store.habitCheckIns = mergeById(store.habitCheckIns, incoming.habitCheckIns);
+        store.plans = mergeById(store.plans, incoming.plans);
+        store.categories = mergeById(store.categories, incoming.categories);
+        store.accounts = mergeById(store.accounts, incoming.accounts);
+        store.transactions = mergeById(store.transactions, incoming.transactions);
+        store.budgets = mergeById(store.budgets, incoming.budgets);
+        store.assets = mergeById(store.assets, incoming.assets);
+        store.moments = mergeById(store.moments, incoming.moments);
+        store.settings = incoming.settings;
+      }
+      migrateStore(store);
+    }),
+    clear: () => this.mutate((store) => {
+      Object.assign(store, initialStore());
+    }),
+  };
+
   stats = {
     dashboard: (today: ISODate = dateToday()) => this.query((store) => {
-      const todayPlans = store.plans.filter((item) => item.level === 'day' && item.period === today);
+      const todayPlans = store.plans.filter((item) => item.level === 'day' && item.period === today).sort((a, b) => a.order - b.order);
+      const overduePlans = store.plans.filter((item) => item.level === 'day' && item.period < today && !['completed', 'cancelled'].includes(item.status)).sort((a, b) => b.period.localeCompare(a.period) || a.order - b.order);
       const completedPlans = todayPlans.filter((item) => item.status === 'completed').length;
       const completedHabits = store.habits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today)).length;
       const month = today.slice(0, 7);
@@ -530,6 +594,8 @@ export class MockDataSource implements DataSource {
           budgetSpent: total(expenses.filter((item) => item.date.startsWith(month))),
         },
         expiringAssets,
+        overduePlans,
+        todayPlans,
         recentMoments: [...store.moments].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3),
       };
     }),

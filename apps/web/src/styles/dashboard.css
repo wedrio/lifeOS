@@ -1,0 +1,26 @@
+.dashboard-welcome-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.dashboard-plan-list { display: grid; gap: 8px; }
+.dashboard-plan-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(85px, 150px) auto; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid #f0f0f3; }
+.dashboard-plan-row:last-child { border-bottom: 0; }
+.dashboard-plan-row.is-completed .ant-checkbox-wrapper { color: #8a8b99; text-decoration: line-through; }
+.dashboard-plan-progress { min-width: 0; }
+.dashboard-plan-progress .ant-progress { margin: 0; }
+.dashboard-reminder-list { display: grid; gap: 8px; }
+.dashboard-reminder { display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px; border: 0; border-radius: 10px; color: inherit; background: #f8f8fb; cursor: pointer; text-align: left; }
+.dashboard-reminder:hover { background: #f1f0ff; }
+.dashboard-reminder.urgent { background: #fff3f4; }
+.dashboard-reminder-body { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.dashboard-reminder-body strong, .dashboard-reminder-body small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-reminder-body small { color: #77798a; }
+.dashboard-moment-list { display: grid; gap: 13px; }
+.dashboard-moment-row { display: flex; align-items: flex-start; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f3; }
+.dashboard-moment-row:last-child { padding-bottom: 0; border-bottom: 0; }
+.dashboard-moment-emoji { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 10px; background: #f0efff; font-size: 17px; }
+.dashboard-progress-block { margin-bottom: 15px; }
+.dashboard-progress-block .ant-progress { margin: 5px 0 0; }
+
+@media (max-width: 575px) {
+  .dashboard-welcome-row { align-items: flex-start; flex-direction: column; }
+  .dashboard-plan-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .dashboard-plan-progress { display: none; }
+}

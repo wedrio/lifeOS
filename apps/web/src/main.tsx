@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { BrowserRouter } from 'react-router-dom';
 import { AppRoutes } from './routes';
 import { useUIStore } from './stores/uiStore';
+import { dataSource } from './data';
 import './styles/global.css';
 
 function Application() {
   const theme = useUIStore((state) => state.theme);
+  const setTheme = useUIStore((state) => state.setTheme);
+  useEffect(() => {
+    void dataSource.settings.get().then((settings) => {
+      setTheme(settings.theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : settings.theme);
+    });
+  }, [setTheme]);
   return (
     <ConfigProvider
       locale={zhCN}

@@ -161,7 +161,27 @@ export interface DashboardStats {
   habits: { completed: number; total: number };
   finance: { todayExpense: number; monthExpense: number; budget?: Budget; budgetSpent: number };
   expiringAssets: ExpiringAsset[];
+  overduePlans: Plan[];
+  todayPlans: Plan[];
   recentMoments: Moment[];
+}
+
+export type BackupImportMode = 'replace' | 'merge';
+export interface BackupPayload {
+  version: 1;
+  exportedAt: ISODateTime;
+  data: {
+    habits: Habit[];
+    habitCheckIns: HabitCheckIn[];
+    plans: Plan[];
+    categories: Category[];
+    accounts: Account[];
+    transactions: Transaction[];
+    budgets: Budget[];
+    assets: Asset[];
+    moments: Moment[];
+    settings: Settings;
+  };
 }
 export interface FinanceStats {
   month: string;

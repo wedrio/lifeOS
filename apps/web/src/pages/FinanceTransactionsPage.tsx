@@ -3,6 +3,7 @@ import { Button, Card, Col, Empty, Input, Popconfirm, Row, Select, Space, Table,
 import { AppstoreOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { Account, Category, FinanceStats, Transaction, TransactionFilter } from '@lifeos/shared';
 import { dataSource, generateDemoData } from '../data';
+import { useSearchParams } from 'react-router-dom';
 import { currentMonth, formatCents, formatShortDate } from '../lib/finance';
 import { FinanceCatalogDrawer } from '../components/finance/FinanceCatalogDrawer';
 import { TransactionFormModal } from '../components/finance/TransactionFormModal';
@@ -20,6 +21,14 @@ export function FinanceTransactionsPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | undefined>();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    setEditing(undefined);
+    setEditorOpen(true);
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const reload = useCallback(async () => {
     setLoading(true);
