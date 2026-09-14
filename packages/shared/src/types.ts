@@ -146,8 +146,10 @@ export interface Settings extends BaseEntity {
   currency: string;
   theme: ThemeMode;
   weekStartsOn: 0 | 1;
+  /** When enabled, unfinished daily plans are moved forward on opening today's plan. */
+  autoRollOverIncompletePlans: boolean;
 }
-export type SettingsInput = Pick<Settings, 'currency' | 'theme' | 'weekStartsOn'>;
+export type SettingsInput = Pick<Settings, 'currency' | 'theme' | 'weekStartsOn' | 'autoRollOverIncompletePlans'>;
 
 export interface ExpiringAsset {
   asset: Asset;

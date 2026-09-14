@@ -105,6 +105,7 @@ function initialStore(): MockStore {
       currency: 'CNY',
       theme: 'system',
       weekStartsOn: 1,
+      autoRollOverIncompletePlans: true,
     },
   };
 }
@@ -123,6 +124,15 @@ function ensureFinanceCatalog(store: MockStore) {
   if (store.accounts.length === 0) store.accounts = defaultAccounts();
 }
 
+function migrateStore(store: MockStore): boolean {
+  let changed = migrateFinanceDefaults(store);
+  if (typeof store.settings.autoRollOverIncompletePlans !== 'boolean') {
+    store.settings.autoRollOverIncompletePlans = true;
+    changed = true;
+  }
+  return changed;
+}
+
 function shiftMonth(period: string, offset: number): string {
   const [year, month] = period.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1 + offset, 1));
@@ -131,6 +141,19 @@ function shiftMonth(period: string, offset: number): string {
 
 function dateInMonth(period: string, day: number): ISODate {
   return `${period}-${String(day).padStart(2, '0')}`;
+}
+
+function shiftDate(date: ISODate, offset: number): ISODate {
+  return new Date(Date.parse(`${date}T12:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
+}
+
+function currentWeekPeriod(date: ISODate): string {
+  const value = new Date(`${date}T12:00:00Z`);
+  const weekday = value.getUTCDay() || 7;
+  value.setUTCDate(value.getUTCDate() + 4 - weekday);
+  const yearStart = new Date(Date.UTC(value.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((value.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
+  return `${value.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
 function demoTransactions(): Transaction[] {
@@ -144,6 +167,36 @@ function demoTransactions(): Transaction[] {
     demos.push(salary, dining, transport, entertainment);
   });
   return demos;
+}
+
+function demoDisciplineStore(store: MockStore): number {
+  if (store.habits.length > 0 || store.plans.length > 0) return 0;
+  const habits: Habit[] = [
+    { ...base(), id: 'demo-habit-read', name: '阅读 30 分钟', icon: '📚', color: '#5b5ce2', frequency: 'daily', timesPerPeriod: 1, reminderTime: '21:00', allowBackfillDays: 2, archived: false },
+    { ...base(), id: 'demo-habit-exercise', name: '运动', icon: '🏃', color: '#e76f8a', frequency: 'weekly', timesPerPeriod: 3, reminderTime: '18:30', allowBackfillDays: 1, archived: false },
+    { ...base(), id: 'demo-habit-water', name: '喝够水', icon: '💧', color: '#53a8ff', frequency: 'daily', timesPerPeriod: 1, allowBackfillDays: 0, archived: false },
+  ];
+  const reference = dateToday();
+  const checkIns: HabitCheckIn[] = [];
+  for (let offset = 0; offset < 180; offset += 1) {
+    const date = shiftDate(reference, -offset);
+    if (offset % 9 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-read', date });
+    if (offset % 2 === 0 || offset % 5 === 0) checkIns.push({ ...base(), habitId: 'demo-habit-exercise', date });
+    if (offset % 6 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-water', date });
+  }
+  const year = reference.slice(0, 4);
+  const month = reference.slice(0, 7);
+  const plans: Plan[] = [
+    { ...base(), id: 'demo-plan-year', title: '成为更有能量的自己', description: '建立稳定的学习、运动与休息节奏。', level: 'year', period: year, status: 'in_progress', progress: 55, priority: 'high', order: 0 },
+    { ...base(), id: 'demo-plan-month', title: '九月习惯养成', description: '完成阅读与运动目标。', level: 'month', period: month, parentId: 'demo-plan-year', status: 'in_progress', progress: 62, priority: 'high', order: 0 },
+    { ...base(), id: 'demo-plan-week', title: '本周复盘与训练', level: 'week', period: currentWeekPeriod(reference), parentId: 'demo-plan-month', status: 'in_progress', progress: 50, priority: 'medium', order: 0 },
+    { ...base(), id: 'demo-plan-day-1', title: '完成 30 分钟阅读', level: 'day', period: reference, parentId: 'demo-plan-week', status: 'not_started', progress: 0, priority: 'high', order: 0 },
+    { ...base(), id: 'demo-plan-day-2', title: '下班后慢跑 3 公里', level: 'day', period: reference, parentId: 'demo-plan-week', status: 'in_progress', progress: 40, priority: 'medium', order: 1 },
+  ];
+  store.habits.push(...habits);
+  store.habitCheckIns.push(...checkIns);
+  store.plans.push(...plans);
+  return habits.length + checkIns.length + plans.length;
 }
 
 /**
@@ -165,7 +218,7 @@ export class MockDataSource implements DataSource {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const store = JSON.parse(raw) as MockStore;
-        if (migrateFinanceDefaults(store)) this.write(store);
+        if (migrateStore(store)) this.write(store);
         return store;
       }
     } catch {
@@ -214,6 +267,11 @@ export class MockDataSource implements DataSource {
     });
   }
 
+  /** Adds habits, check-ins and four-level plans to an untouched discipline workspace. */
+  async generateDisciplineDemoData(): Promise<number> {
+    return this.mutate((store) => demoDisciplineStore(store));
+  }
+
   habits = {
     list: (includeArchived = false) => this.query((store) => store.habits.filter((item) => includeArchived || !item.archived)),
     create: (input: HabitInput) => this.mutate((store) => {
@@ -231,7 +289,16 @@ export class MockDataSource implements DataSource {
       store.habitCheckIns = store.habitCheckIns.filter((item) => item.habitId !== habitId);
     }),
     checkIn: (habitId: string, date: ISODate, note?: string) => this.mutate((store) => {
-      if (!store.habits.some((item) => item.id === habitId)) throw new Error('未找到该习惯');
+      const habit = store.habits.find((item) => item.id === habitId);
+      if (!habit) throw new Error('未找到该习惯');
+      if (habit.archived) throw new Error('已归档习惯不能打卡');
+      const today = dateToday();
+      const targetTime = Date.parse(`${date}T12:00:00Z`);
+      const todayTime = Date.parse(`${today}T12:00:00Z`);
+      if (!Number.isFinite(targetTime)) throw new Error('日期格式应为 YYYY-MM-DD');
+      if (targetTime > todayTime) throw new Error('不能为未来日期打卡');
+      const daysAgo = Math.round((todayTime - targetTime) / 86_400_000);
+      if (daysAgo > habit.allowBackfillDays) throw new Error(`仅允许补打最近 ${habit.allowBackfillDays} 天`);
       const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
       if (existing) return existing;
       const entity: HabitCheckIn = { ...base(), habitId, date, ...(note ? { note } : {}) };
@@ -272,6 +339,13 @@ export class MockDataSource implements DataSource {
         const entity = store.plans.find((item) => item.id === planId);
         if (entity) this.touch(entity, { order });
       });
+    }),
+    rollOverIncompleteDayPlans: (from: ISODate, to: ISODate) => this.mutate((store) => {
+      if (from >= to) return 0;
+      const pending = store.plans.filter((item) => item.level === 'day' && item.period === from && !['completed', 'cancelled'].includes(item.status));
+      const nextOrder = store.plans.filter((item) => item.level === 'day' && item.period === to).length;
+      pending.forEach((plan, index) => this.touch(plan, { period: to, order: nextOrder + index }));
+      return pending.length;
     }),
   };
 

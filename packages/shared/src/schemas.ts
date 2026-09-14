@@ -93,4 +93,5 @@ export const settingsInputSchema = z.object({
   currency: z.string().trim().min(1).max(6),
   theme: z.enum(['light', 'dark', 'system']),
   weekStartsOn: z.union([z.literal(0), z.literal(1)]),
+  autoRollOverIncompletePlans: z.boolean(),
 });

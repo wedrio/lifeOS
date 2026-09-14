@@ -5,6 +5,8 @@ import { FeaturePlaceholder } from './pages/FeaturePlaceholder';
 import { FinanceTransactionsPage } from './pages/FinanceTransactionsPage';
 import { BudgetPage } from './pages/BudgetPage';
 import { FinanceStatsPage } from './pages/FinanceStatsPage';
+import { HabitsPage } from './pages/HabitsPage';
+import { PlansPage } from './pages/PlansPage';
 
 const features = {
   habits: { emoji: '🎯', title: '习惯打卡', description: '建立习惯、完成打卡并看见坚持的轨迹。', nextStage: 'A2 · 自律闭环' },
@@ -20,8 +22,9 @@ const features = {
 export function AppRoutes() {
   return <AppLayout><Routes>
     <Route path="/" element={<DashboardPage />} />
-    <Route path="/discipline/habits" element={<FeaturePlaceholder {...features.habits} />} />
-    <Route path="/discipline/plans" element={<FeaturePlaceholder {...features.plans} />} />
+    <Route path="/discipline" element={<Navigate to="/discipline/habits" replace />} />
+    <Route path="/discipline/habits" element={<HabitsPage />} />
+    <Route path="/discipline/plans" element={<PlansPage />} />
     <Route path="/finance" element={<Navigate to="/finance/transactions" replace />} />
     <Route path="/finance/transactions" element={<FinanceTransactionsPage />} />
     <Route path="/finance/budget" element={<BudgetPage />} />
