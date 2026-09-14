@@ -199,6 +199,22 @@ function demoDisciplineStore(store: MockStore): number {
   return habits.length + checkIns.length + plans.length;
 }
 
+
+function demoAssetsStore(store: MockStore): number {
+  if (store.assets.length > 0) return 0;
+  const reference = dateToday();
+  const assets: Asset[] = [
+    { ...base(), id: 'demo-asset-phone', kind: 'physical', name: 'iPhone 15 Pro', icon: '📱', category: '手机', brand: 'Apple', model: 'iPhone 15 Pro 256GB', serialNo: 'DEMO-IP15-2026', purchaseDate: shiftDate(reference, -260), purchasePrice: 899900, warrantyUntil: shiftDate(reference, 8), estimatedValue: 650000, status: 'in_use' },
+    { ...base(), id: 'demo-asset-laptop', kind: 'physical', name: 'MacBook Air', icon: '💻', category: '电脑', brand: 'Apple', model: 'M3 16GB', purchaseDate: shiftDate(reference, -410), purchasePrice: 1099900, warrantyUntil: shiftDate(reference, 120), estimatedValue: 780000, status: 'in_use' },
+    { ...base(), id: 'demo-asset-camera', kind: 'physical', name: 'Sony ZV-E10', icon: '📷', category: '数码', brand: 'Sony', model: 'ZV-E10', purchaseDate: shiftDate(reference, -770), purchasePrice: 449900, warrantyUntil: shiftDate(reference, -40), estimatedValue: 285000, status: 'idle' },
+    { ...base(), id: 'demo-asset-music', kind: 'subscription', name: 'Apple Music', icon: '🎵', category: '音乐', price: 1100, billingCycle: 'monthly', startDate: shiftDate(reference, -320), expireDate: shiftDate(reference, 3), autoRenew: true, accountNote: '家庭共享主账号' },
+    { ...base(), id: 'demo-asset-cloud', kind: 'subscription', name: 'iCloud+', icon: '☁️', category: '云盘', price: 2100, billingCycle: 'monthly', startDate: shiftDate(reference, -210), expireDate: shiftDate(reference, 18), autoRenew: true, accountNote: '200GB 存储空间' },
+    { ...base(), id: 'demo-asset-tool', kind: 'subscription', name: 'Raycast Pro', icon: '⚡', category: '工具', price: 9600, billingCycle: 'yearly', startDate: shiftDate(reference, -340), expireDate: shiftDate(reference, -2), autoRenew: false, accountNote: '到期后评估是否续订' },
+  ];
+  store.assets.push(...assets);
+  return assets.length;
+}
+
 /**
  * Browser-local implementation of the stable DataSource contract.
  * It deliberately persists the same entity shapes that the remote API will use.
@@ -270,6 +286,11 @@ export class MockDataSource implements DataSource {
   /** Adds habits, check-ins and four-level plans to an untouched discipline workspace. */
   async generateDisciplineDemoData(): Promise<number> {
     return this.mutate((store) => demoDisciplineStore(store));
+  }
+
+  /** Adds physical assets and subscriptions to an untouched asset workspace. */
+  async generateAssetsDemoData(): Promise<number> {
+    return this.mutate((store) => demoAssetsStore(store));
   }
 
   habits = {

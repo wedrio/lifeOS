@@ -77,6 +77,11 @@ export const assetInputSchema = z.object({
   expireDate: date.optional(),
   autoRenew: z.boolean().optional(),
   accountNote: z.string().max(500).optional(),
+}).superRefine((asset, context) => {
+  if (asset.kind !== 'subscription') return;
+  if (asset.price === undefined) context.addIssue({ code: z.ZodIssueCode.custom, path: ['price'], message: '请填写订阅价格' });
+  if (!asset.startDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['startDate'], message: '请填写订阅开始日期' });
+  if (!asset.expireDate) context.addIssue({ code: z.ZodIssueCode.custom, path: ['expireDate'], message: '请填写订阅到期日期' });
 });
 
 export const momentInputSchema = z.object({

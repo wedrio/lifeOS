@@ -7,6 +7,7 @@ import { BudgetPage } from './pages/BudgetPage';
 import { FinanceStatsPage } from './pages/FinanceStatsPage';
 import { HabitsPage } from './pages/HabitsPage';
 import { PlansPage } from './pages/PlansPage';
+import { AssetsPage } from './pages/AssetsPage';
 
 const features = {
   habits: { emoji: '🎯', title: '习惯打卡', description: '建立习惯、完成打卡并看见坚持的轨迹。', nextStage: 'A2 · 自律闭环' },
@@ -29,7 +30,7 @@ export function AppRoutes() {
     <Route path="/finance/transactions" element={<FinanceTransactionsPage />} />
     <Route path="/finance/budget" element={<BudgetPage />} />
     <Route path="/finance/stats" element={<FinanceStatsPage />} />
-    <Route path="/assets" element={<FeaturePlaceholder {...features.assets} />} />
+    <Route path="/assets" element={<AssetsPage />} />
     <Route path="/moments" element={<FeaturePlaceholder {...features.moments} />} />
     <Route path="/settings" element={<FeaturePlaceholder {...features.settings} />} />
     <Route path="*" element={<Navigate to="/" replace />} />
