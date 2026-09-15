@@ -11,6 +11,7 @@ export const dataSource: DataSource = mockDataSource;
 /** Development-only helper required by the Mock-first acceptance flow. */
 export const generateDemoData = () => mockDataSource.generateDemoData();
 export const generateDisciplineDemoData = () => mockDataSource.generateDisciplineDemoData();
+export const generateReadingDemoData = () => mockDataSource.generateReadingDemoData();
 export const generateAssetsDemoData = () => mockDataSource.generateAssetsDemoData();
 export const generateMomentsDemoData = () => mockDataSource.generateMomentsDemoData();
 export const generateAllDemoData = () => mockDataSource.generateAllDemoData();

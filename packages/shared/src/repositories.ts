@@ -3,6 +3,7 @@ import type {
   Category, CategoryInput, DashboardStats, FinanceStats, Habit, HabitCheckIn, HabitInput,
   ISODate, Moment, MomentFilter, MomentInput, Plan, PlanFilter, PlanInput, Settings,
   SettingsInput, Transaction, TransactionFilter, TransactionInput, BackupImportMode, BackupPayload,
+  Book, BookInput, BookFilter, ReadingLog, ReadingLogInput, BookNote, BookNoteInput, ReadingStats,
 } from './types';
 
 export interface HabitRepository {
@@ -22,6 +23,19 @@ export interface PlanRepository {
   remove(id: string): Promise<void>;
   reorder(ids: string[]): Promise<void>;
   rollOverIncompleteDayPlans(from: ISODate, to: ISODate): Promise<number>;
+}
+
+export interface BookRepository {
+  list(filter?: BookFilter): Promise<Book[]>;
+  get(id: string): Promise<Book | null>;
+  create(input: BookInput): Promise<Book>;
+  update(id: string, patch: Partial<BookInput>): Promise<Book>;
+  remove(id: string): Promise<void>;
+  logProgress(bookId: string, input: ReadingLogInput): Promise<ReadingLog>;
+  listLogs(bookId?: string): Promise<ReadingLog[]>;
+  createNote(bookId: string, input: BookNoteInput): Promise<BookNote>;
+  listNotes(bookId?: string): Promise<BookNote[]>;
+  removeNote(id: string): Promise<void>;
 }
 
 export interface FinanceRepository {
@@ -63,6 +77,7 @@ export interface SettingsRepository {
 export interface StatsRepository {
   dashboard(today?: ISODate): Promise<DashboardStats>;
   finance(month?: string): Promise<FinanceStats>;
+  reading(year?: number): Promise<ReadingStats>;
 }
 
 export interface BackupRepository {
@@ -74,6 +89,7 @@ export interface BackupRepository {
 export interface DataSource {
   habits: HabitRepository;
   plans: PlanRepository;
+  books: BookRepository;
   finance: FinanceRepository;
   assets: AssetRepository;
   moments: MomentRepository;

@@ -1,0 +1,340 @@
+/* ============================================================
+   Paper Bookshelf & Physical Reading Styles
+   ============================================================ */
+
+.reading-summary { margin-bottom: 16px; }
+.reading-summary .ant-card { position: relative; overflow: hidden; }
+.reading-summary .ant-card::after { position: absolute; top: -35px; right: -25px; width: 90px; height: 90px; border-radius: 50%; content: ""; background: linear-gradient(135deg, rgba(52, 211, 153, 0.15), rgba(56, 189, 248, 0.08)); filter: blur(6px); }
+
+/* Bookshelf Toolbar */
+.reading-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.reading-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Desk (Active Reading) Section */
+.reading-desk-section { margin-bottom: 24px; }
+.desk-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+.desk-book-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow);
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+.desk-book-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift) !important;
+}
+.desk-book-card .ant-card-body {
+  padding: 18px 20px;
+}
+.desk-card-inner {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.desk-book-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.desk-book-info h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 730;
+  letter-spacing: -.25px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.desk-book-author {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.desk-book-progress-wrap {
+  margin-top: auto;
+  padding-top: 10px;
+}
+.desk-book-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.desk-book-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.desk-book-actions .ant-btn {
+  flex: 1;
+}
+
+/* Hardcover Simulated Book Cover */
+.book-cover-shell {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 6px 12px 12px 6px;
+  box-shadow: -4px 6px 16px rgba(0, 0, 0, 0.22), inset 2px 0 3px rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+  user-select: none;
+}
+.book-cover-shell:hover {
+  transform: scale(1.02) rotate(-0.5deg);
+  box-shadow: -6px 10px 22px rgba(0, 0, 0, 0.3);
+}
+
+.book-cover-shell.size-sm { width: 68px; height: 96px; }
+.book-cover-shell.size-md { width: 92px; height: 130px; }
+.book-cover-shell.size-lg { width: 120px; height: 170px; }
+
+.book-cover-real-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 6px 12px 12px 6px;
+}
+
+/* Hardcover Theme Skins */
+.hardcover-skin {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 10px 8px 8px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-left: 3px solid rgba(255, 255, 255, 0.22);
+}
+
+.hardcover-skin::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 7px;
+  width: 2px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: 1px 0 1px rgba(255, 255, 255, 0.12);
+  content: "";
+}
+
+.hardcover-skin.theme-emerald {
+  background: linear-gradient(145deg, #164e38 0%, #0c3324 55%, #082419 100%);
+  color: #e6fcf5;
+}
+.hardcover-skin.theme-sage {
+  background: linear-gradient(145deg, #33594b 0%, #203c32 55%, #152922 100%);
+  color: #f0faf5;
+}
+.hardcover-skin.theme-obsidian {
+  background: linear-gradient(145deg, #232d3f 0%, #161d2b 55%, #0f141e 100%);
+  color: #f1f5f9;
+}
+.hardcover-skin.theme-chestnut {
+  background: linear-gradient(145deg, #5c3523 0%, #3e2215 55%, #29150d 100%);
+  color: #fef3c7;
+}
+.hardcover-skin.theme-ocean {
+  background: linear-gradient(145deg, #1b3d5d 0%, #10263b 55%, #091724 100%);
+  color: #e0f2fe;
+}
+.hardcover-skin.theme-crimson {
+  background: linear-gradient(145deg, #5c232f 0%, #3d141d 55%, #290b12 100%);
+  color: #ffe4e6;
+}
+
+.hardcover-emblem {
+  font-size: 11px;
+  opacity: 0.8;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.hardcover-title {
+  font-family: "Songti SC", "Source Han Serif CN", "STSong", "Georgia", serif;
+  font-weight: 700;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.size-sm .hardcover-title { font-size: 11px; -webkit-line-clamp: 2; }
+.size-md .hardcover-title { font-size: 13px; }
+.size-lg .hardcover-title { font-size: 15px; }
+
+.hardcover-author {
+  font-size: 9px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.size-lg .hardcover-author { font-size: 11px; }
+
+/* Grid Bookshelf Cards */
+.bookshelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.bookshelf-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px !important;
+  background: var(--glass) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.bookshelf-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift) !important;
+}
+.bookshelf-card .ant-card-body {
+  padding: 16px;
+}
+.bookshelf-card-top {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.bookshelf-card-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bookshelf-card-title {
+  margin: 0 0 3px;
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bookshelf-card-author {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bookshelf-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(116, 117, 148, 0.08);
+}
+
+/* Reading Logs Timeline */
+.reading-log-timeline {
+  margin-top: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.reading-log-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(116, 117, 148, 0.06);
+  font-size: 13px;
+}
+.reading-log-item:last-child {
+  border-bottom: 0;
+}
+
+/* Book Notes & Quotes */
+.book-quote-card {
+  position: relative;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.8);
+}
+.book-quote-card::before {
+  position: absolute;
+  top: 12px;
+  left: 10px;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--leaf);
+  opacity: 0.35;
+  content: "“";
+  font-family: Georgia, serif;
+}
+.book-quote-text {
+  font-size: 14px;
+  line-height: 1.65;
+  font-style: italic;
+  padding-left: 14px;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+.book-quote-page {
+  font-size: 11px;
+  color: var(--leaf-deep);
+  font-weight: 650;
+}
+.book-quote-thoughts {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(116, 117, 148, 0.12);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Dark Mode Overrides for Reading Module */
+[data-theme='dark'] .desk-book-card {
+  background: var(--glass) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme='dark'] .bookshelf-card {
+  background: var(--glass) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme='dark'] .bookshelf-card-footer {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+[data-theme='dark'] .reading-log-item {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+[data-theme='dark'] .book-quote-card {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+[data-theme='dark'] .book-quote-text {
+  color: #f1f5f9;
+}
+[data-theme='dark'] .book-quote-page {
+  color: #34d399;
+}
+[data-theme='dark'] .book-quote-thoughts {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+@media (max-width: 575px) {
+  .desk-card-grid { grid-template-columns: 1fr; }
+  .bookshelf-grid { grid-template-columns: 1fr; }
+}

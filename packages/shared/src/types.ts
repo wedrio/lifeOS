@@ -49,6 +49,59 @@ export interface PlanFilter {
   includeCompleted?: boolean;
 }
 
+export type BookStatus = 'queue' | 'reading' | 'finished' | 'abandoned';
+export type BookCoverTheme = 'emerald' | 'sage' | 'obsidian' | 'chestnut' | 'ocean' | 'crimson';
+
+export interface Book extends BaseEntity {
+  title: string;
+  author?: string;
+  totalPages: number;
+  currentPage: number;
+  status: BookStatus;
+  category?: string;
+  coverUrl?: string;
+  coverTheme?: BookCoverTheme | string;
+  rating?: number;
+  review?: string;
+  takeaways?: string[];
+  startDate?: ISODate;
+  finishDate?: ISODate;
+}
+export type BookInput = Omit<Book, keyof BaseEntity>;
+
+export interface ReadingLog extends BaseEntity {
+  bookId: string;
+  page: number;
+  pagesRead: number;
+  note?: string;
+  date: ISODate;
+}
+export type ReadingLogInput = Omit<ReadingLog, keyof BaseEntity>;
+
+export interface BookNote extends BaseEntity {
+  bookId: string;
+  pageNumber?: number;
+  quote: string;
+  thoughts?: string;
+  tags: string[];
+}
+export type BookNoteInput = Omit<BookNote, keyof BaseEntity>;
+
+export interface BookFilter {
+  status?: BookStatus;
+  category?: string;
+  keyword?: string;
+}
+
+export interface ReadingStats {
+  currentReadingCount: number;
+  finishedThisYear: number;
+  totalPagesRead: number;
+  annualTarget: number;
+  readingTrend: Array<{ period: string; pagesRead: number; booksFinished: number }>;
+  categoryDistribution: Array<{ category: string; count: number }>;
+}
+
 export type TransactionType = 'expense' | 'income';
 export interface Category extends BaseEntity {
   name: string;
@@ -121,7 +174,7 @@ export interface Asset extends BaseEntity {
 export type AssetInput = Omit<Asset, keyof BaseEntity>;
 
 export interface EntityLink {
-  type: 'habit_checkin' | 'transaction' | 'asset';
+  type: 'habit_checkin' | 'transaction' | 'asset' | 'book' | 'book_note';
   id: string;
 }
 export interface Moment extends BaseEntity {
@@ -148,8 +201,9 @@ export interface Settings extends BaseEntity {
   weekStartsOn: 0 | 1;
   /** When enabled, unfinished daily plans are moved forward on opening today's plan. */
   autoRollOverIncompletePlans: boolean;
+  annualReadingTarget: number;
 }
-export type SettingsInput = Pick<Settings, 'currency' | 'theme' | 'weekStartsOn' | 'autoRollOverIncompletePlans'>;
+export type SettingsInput = Pick<Settings, 'currency' | 'theme' | 'weekStartsOn' | 'autoRollOverIncompletePlans' | 'annualReadingTarget'>;
 
 export interface ExpiringAsset {
   asset: Asset;
@@ -164,6 +218,13 @@ export interface DashboardStats {
   overduePlans: Plan[];
   todayPlans: Plan[];
   recentMoments: Moment[];
+  reading: {
+    currentBook?: Book;
+    activeBooks: Book[];
+    annualTarget: number;
+    finishedThisYear: number;
+    totalPagesRead: number;
+  };
 }
 
 export type BackupImportMode = 'replace' | 'merge';
@@ -174,6 +235,9 @@ export interface BackupPayload {
     habits: Habit[];
     habitCheckIns: HabitCheckIn[];
     plans: Plan[];
+    books?: Book[];
+    readingLogs?: ReadingLog[];
+    bookNotes?: BookNote[];
     categories: Category[];
     accounts: Account[];
     transactions: Transaction[];

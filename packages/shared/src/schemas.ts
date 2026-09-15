@@ -26,6 +26,38 @@ export const planInputSchema = z.object({
   order: z.number().int().min(0).optional(),
 });
 
+export const bookInputSchema = z.object({
+  title: z.string().trim().min(1, '请输入书名').max(200),
+  author: z.string().trim().max(100).optional(),
+  totalPages: z.number().int().positive('总页数必须大于 0'),
+  currentPage: z.number().int().min(0).default(0),
+  status: z.enum(['queue', 'reading', 'finished', 'abandoned']),
+  category: z.string().trim().max(50).optional(),
+  coverUrl: z.string().url('请输入有效的封面链接').optional().or(z.literal('')),
+  coverTheme: z.string().max(30).optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  review: z.string().max(10000).optional(),
+  takeaways: z.array(z.string().trim().min(1).max(500)).max(10).optional(),
+  startDate: date.optional(),
+  finishDate: date.optional(),
+});
+
+export const readingLogInputSchema = z.object({
+  bookId: z.string().min(1),
+  page: z.number().int().positive('读到的页码必须大于 0'),
+  pagesRead: z.number().int().nonnegative(),
+  note: z.string().trim().max(1000).optional(),
+  date,
+});
+
+export const bookNoteInputSchema = z.object({
+  bookId: z.string().min(1),
+  pageNumber: z.number().int().positive().optional(),
+  quote: z.string().trim().min(1, '请输入摘录内容').max(5000),
+  thoughts: z.string().trim().max(5000).optional(),
+  tags: z.array(z.string().trim().min(1).max(30)).max(20),
+});
+
 export const categoryInputSchema = z.object({
   name: z.string().trim().min(1).max(40),
   icon: z.string().min(1).max(8),
@@ -91,7 +123,7 @@ export const momentInputSchema = z.object({
   weather: z.string().max(16).optional(),
   location: z.string().max(120).optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(20),
-  links: z.array(z.object({ type: z.enum(['habit_checkin', 'transaction', 'asset']), id: z.string().min(1) })).max(30),
+  links: z.array(z.object({ type: z.enum(['habit_checkin', 'transaction', 'asset', 'book', 'book_note']), id: z.string().min(1) })).max(30),
 });
 
 export const settingsInputSchema = z.object({
@@ -99,4 +131,5 @@ export const settingsInputSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']),
   weekStartsOn: z.union([z.literal(0), z.literal(1)]),
   autoRollOverIncompletePlans: z.boolean(),
+  annualReadingTarget: z.number().int().min(1).max(500).default(12),
 });
