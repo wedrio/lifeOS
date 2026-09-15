@@ -32,9 +32,17 @@
 .calendar-moment-row { padding: 11px 0; border-bottom: 1px solid rgba(116,117,148,.09); }
 .calendar-moment-row:last-child { border-bottom: 0; }
 
-[data-theme='dark'] .moment-content { color: #dcdeea; }
-[data-theme='dark'] .calendar-weekday { background: rgba(255,255,255,.04); }
-[data-theme='dark'] .calendar-day { border-color: rgba(255,255,255,.07); background: rgba(255,255,255,.025); }
-[data-theme='dark'] .calendar-day:hover { background: rgba(255,255,255,.08); }
+[data-theme='dark'] .moment-card { border-color: rgba(255,255,255,.08) !important; }
+[data-theme='dark'] .moment-content { color: #e2e8f0; }
+[data-theme='dark'] .moment-card-footer { border-top-color: rgba(255,255,255,.06); }
+[data-theme='dark'] .moment-image-edit { border-color: rgba(255,255,255,.12); }
+[data-theme='dark'] .moment-image-add { border-color: rgba(52,211,153,.35); color: #34d399; background: rgba(52,211,153,.08); }
+[data-theme='dark'] .moment-calendar { border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.02); }
+[data-theme='dark'] .calendar-weekday { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.06); color: #94a3b8; }
+[data-theme='dark'] .calendar-day { border-color: rgba(255,255,255,.06); background: rgba(255,255,255,.025); color: #f1f5f9; }
+[data-theme='dark'] .calendar-day:hover { background: rgba(255,255,255,.07); }
+[data-theme='dark'] .calendar-day.outside { color: #475569; background: rgba(255,255,255,.01); }
+[data-theme='dark'] .calendar-day.selected { background: rgba(52,211,153,.16); box-shadow: inset 0 0 0 2px #34d399; }
+[data-theme='dark'] .calendar-moment-row { border-bottom-color: rgba(255,255,255,.06); }
 
 @media (max-width: 575px) { .moment-card .ant-card-body { padding: 16px; } .calendar-day { min-height: 55px; padding: 6px; } .calendar-day-count { right: 4px; bottom: 4px; width: 17px; height: 17px; font-size: 10px; } .calendar-weekday { padding: 6px 2px; font-size: 11px; } .moment-image-edit, .moment-image-add { width: 72px; height: 72px; } }

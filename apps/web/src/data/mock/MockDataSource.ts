@@ -6,6 +6,11 @@ import type {
   BackupImportMode,
   BackupPayload,
   BaseEntity,
+  Book,
+  BookFilter,
+  BookInput,
+  BookNote,
+  BookNoteInput,
   Budget,
   BudgetInput,
   Category,
@@ -21,6 +26,8 @@ import type {
   Plan,
   PlanFilter,
   PlanInput,
+  ReadingLog,
+  ReadingLogInput,
   Settings,
   SettingsInput,
   Transaction,
@@ -35,6 +42,9 @@ interface MockStore {
   habits: Habit[];
   habitCheckIns: HabitCheckIn[];
   plans: Plan[];
+  books: Book[];
+  readingLogs: ReadingLog[];
+  bookNotes: BookNote[];
   categories: Category[];
   accounts: Account[];
   transactions: Transaction[];
@@ -47,6 +57,7 @@ interface MockStore {
 const timestamp = () => new Date().toISOString();
 const dateToday = (): ISODate => new Date().toISOString().slice(0, 10);
 const monthToday = () => dateToday().slice(0, 7);
+const yearToday = () => Number(dateToday().slice(0, 4));
 const id = () => globalThis.crypto?.randomUUID?.() ?? `mock-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const clone = <T,>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value)) as T;
 
@@ -93,6 +104,9 @@ function initialStore(): MockStore {
     habits: [],
     habitCheckIns: [],
     plans: [],
+    books: [],
+    readingLogs: [],
+    bookNotes: [],
     categories: defaultCategories(),
     accounts: defaultAccounts(),
     transactions: [],
@@ -108,6 +122,7 @@ function initialStore(): MockStore {
       theme: 'system',
       weekStartsOn: 1,
       autoRollOverIncompletePlans: true,
+      annualReadingTarget: 12,
     },
   };
 }
@@ -130,6 +145,22 @@ function migrateStore(store: MockStore): boolean {
   let changed = migrateFinanceDefaults(store);
   if (typeof store.settings.autoRollOverIncompletePlans !== 'boolean') {
     store.settings.autoRollOverIncompletePlans = true;
+    changed = true;
+  }
+  if (!store.settings.annualReadingTarget) {
+    store.settings.annualReadingTarget = 12;
+    changed = true;
+  }
+  if (!Array.isArray(store.books)) {
+    store.books = [];
+    changed = true;
+  }
+  if (!Array.isArray(store.readingLogs)) {
+    store.readingLogs = [];
+    changed = true;
+  }
+  if (!Array.isArray(store.bookNotes)) {
+    store.bookNotes = [];
     changed = true;
   }
   return changed;
@@ -201,6 +232,132 @@ function demoDisciplineStore(store: MockStore): number {
   return habits.length + checkIns.length + plans.length;
 }
 
+function demoReadingStore(store: MockStore): number {
+  if (store.books.length > 0) return 0;
+  const reference = dateToday();
+  const books: Book[] = [
+    {
+      ...base(),
+      id: 'demo-book-naval',
+      title: '纳瓦尔宝典',
+      author: '埃里克·乔根森',
+      totalPages: 240,
+      currentPage: 156,
+      status: 'reading',
+      category: '财富与认知',
+      coverTheme: 'emerald',
+      startDate: shiftDate(reference, -14),
+    },
+    {
+      ...base(),
+      id: 'demo-book-inside',
+      title: '置身事内：中国政府与经济发展',
+      author: '兰小欢',
+      totalPages: 344,
+      currentPage: 344,
+      status: 'finished',
+      category: '经济与社会',
+      coverTheme: 'chestnut',
+      rating: 5,
+      review: '从地方政府激励机制理解中国经济发展，结构清晰，视角极其务实接地气。',
+      takeaways: [
+        '理解中国经济，必须理解地方政府在土地财政与招商引资中的双重角色。',
+        '分税制改革重塑了中央与地方的财政激励格局。',
+        '经济发展的关键在于理顺激励机制并顺应产业演化规律。',
+      ],
+      startDate: shiftDate(reference, -45),
+      finishDate: shiftDate(reference, -12),
+    },
+    {
+      ...base(),
+      id: 'demo-book-principles',
+      title: '原则',
+      author: '瑞·达利欧',
+      totalPages: 560,
+      currentPage: 218,
+      status: 'reading',
+      category: '思维模型',
+      coverTheme: 'obsidian',
+      startDate: shiftDate(reference, -28),
+    },
+    {
+      ...base(),
+      id: 'demo-book-courage',
+      title: '被讨厌的勇气',
+      author: '岸见一郎 / 古贺史健',
+      totalPages: 260,
+      currentPage: 260,
+      status: 'finished',
+      category: '心理学',
+      coverTheme: 'sage',
+      rating: 5,
+      review: '课题分离是获得自由与幸福的第一步，一切烦恼皆源于人际关系。',
+      takeaways: ['人际关系是烦恼的根源，也是幸福的源泉。', '把别人的课题与自己的课题彻底分开。'],
+      startDate: shiftDate(reference, -90),
+      finishDate: shiftDate(reference, -65),
+    },
+    {
+      ...base(),
+      id: 'demo-book-flow',
+      title: '心流：最优体验心理学',
+      author: '米哈里·契克森米哈赖',
+      totalPages: 388,
+      currentPage: 0,
+      status: 'queue',
+      category: '心理学',
+      coverTheme: 'ocean',
+    },
+  ];
+
+  const logs: ReadingLog[] = [
+    { ...base(), bookId: 'demo-book-naval', page: 45, pagesRead: 45, note: '建立清晰的杠杆意识', date: shiftDate(reference, -12) },
+    { ...base(), bookId: 'demo-book-naval', page: 92, pagesRead: 47, note: '专长、责任感与杠杆效应', date: shiftDate(reference, -8) },
+    { ...base(), bookId: 'demo-book-naval', page: 135, pagesRead: 43, note: '判断力是最高价值的技能', date: shiftDate(reference, -3) },
+    { ...base(), bookId: 'demo-book-naval', page: 156, pagesRead: 21, note: '幸福是一种选择与习惯', date: reference },
+    { ...base(), bookId: 'demo-book-principles', page: 120, pagesRead: 60, note: '极度求真与极度透明', date: shiftDate(reference, -18) },
+    { ...base(), bookId: 'demo-book-principles', page: 218, pagesRead: 98, note: '五步流程实现愿望', date: shiftDate(reference, -5) },
+  ];
+
+  const notes: BookNote[] = [
+    {
+      ...base(),
+      bookId: 'demo-book-naval',
+      pageNumber: 38,
+      quote: '依靠出租自己的时间是无法致富的。你必须拥有产权（企业的股份），才能实现财务自由。',
+      thoughts: '纸上得来终觉浅，核心是要把时间和精力沉淀在可积累资产上。',
+      tags: ['财富', '思维'],
+    },
+    {
+      ...base(),
+      bookId: 'demo-book-naval',
+      pageNumber: 74,
+      quote: '用头脑赚钱，而不是用时间赚钱。',
+      thoughts: '判断力与决策质量远比单纯的时间消耗重要。',
+      tags: ['杠杆', '认知'],
+    },
+    {
+      ...base(),
+      bookId: 'demo-book-principles',
+      pageNumber: 158,
+      quote: '痛苦 + 反思 = 进步。',
+      thoughts: '面对错误时不要防御，每一次刺痛都是升级认知模型最好的契机。',
+      tags: ['复盘', '心智'],
+    },
+    {
+      ...base(),
+      bookId: 'demo-book-inside',
+      pageNumber: 112,
+      quote: '地方政府在发展经济中所扮演的角色，不仅是制度制定者，更像是一家超级投资公司。',
+      thoughts: '非常震撼的剖析，看清城市基础设施与财政运行的内在逻辑。',
+      tags: ['经济', '宏观'],
+    },
+  ];
+
+  store.books.push(...books);
+  store.readingLogs.push(...logs);
+  store.bookNotes.push(...notes);
+  return books.length + logs.length + notes.length;
+}
 
 function demoAssetsStore(store: MockStore): number {
   if (store.assets.length > 0) return 0;
@@ -217,7 +374,6 @@ function demoAssetsStore(store: MockStore): number {
   return assets.length;
 }
 
-
 function demoImage(left: string, right: string, label: string): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${left}"/><stop offset="1" stop-color="${right}"/></linearGradient></defs><rect width="1200" height="800" fill="url(#g)"/><circle cx="1000" cy="140" r="120" fill="white" fill-opacity=".16"/><text x="80" y="675" fill="white" font-family="sans-serif" font-size="72" font-weight="600">${label}</text></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
@@ -228,15 +384,14 @@ function demoMomentsStore(store: MockStore): number {
   const reference = dateToday();
   const moments: Moment[] = [
     { ...base(), id: 'demo-moment-today', createdAt: `${reference}T20:15:00.000Z`, updatedAt: `${reference}T20:15:00.000Z`, content: '傍晚散步的时候，天空是很温柔的蓝。把今天完成的小事记下来，明天继续。', imageUrls: [demoImage('#5b5ce2', '#79c8e8', 'Evening walk')], mood: '😊', weather: '☀️', location: '家附近', tags: ['散步', '日常'], links: store.assets.slice(0, 1).map((asset) => ({ type: 'asset' as const, id: asset.id })) },
-    { ...base(), id: 'demo-moment-yesterday', createdAt: `${shiftDate(reference, -1)}T12:20:00.000Z`, updatedAt: `${shiftDate(reference, -1)}T12:20:00.000Z`, content: '午休读完了一章书。原来认真留出半小时，也能让一天变得很充实。', imageUrls: [], mood: '😌', weather: '☁️', location: '办公室', tags: ['阅读', '工作日'], links: store.habitCheckIns.slice(0, 1).map((checkIn) => ({ type: 'habit_checkin' as const, id: checkIn.id })) },
+    { ...base(), id: 'demo-moment-yesterday', createdAt: `${shiftDate(reference, -1)}T12:20:00.000Z`, updatedAt: `${shiftDate(reference, -1)}T12:20:00.000Z`, content: '午休翻阅《纳瓦尔宝典》，读到那句“用头脑赚钱，而不是用时间赚钱”，深有感触。', imageUrls: [], mood: '😌', weather: '☁️', location: '办公室', tags: ['阅读', '纸质书'], links: store.books.slice(0, 1).map((book) => ({ type: 'book' as const, id: book.id })) },
     { ...base(), id: 'demo-moment-weekend', createdAt: `${shiftDate(reference, -4)}T10:00:00.000Z`, updatedAt: `${shiftDate(reference, -4)}T10:00:00.000Z`, content: '周末的早晨，给自己做了一顿慢早餐。', imageUrls: [demoImage('#f4a261', '#e9c46a', 'Slow morning'), demoImage('#54c5a1', '#53a8ff', 'Weekend')], mood: '🥳', weather: '🌤️', location: '家', tags: ['周末', '美食'], links: store.transactions.slice(0, 1).map((transaction) => ({ type: 'transaction' as const, id: transaction.id })) },
   ];
   store.moments.push(...moments);
   return moments.length;
 }
 
-
-const backupArrayKeys = ['habits', 'habitCheckIns', 'plans', 'categories', 'accounts', 'transactions', 'budgets', 'assets', 'moments'] as const;
+const backupArrayKeys = ['habits', 'habitCheckIns', 'plans', 'books', 'readingLogs', 'bookNotes', 'categories', 'accounts', 'transactions', 'budgets', 'assets', 'moments'] as const;
 
 function isBackupPayload(value: unknown): value is BackupPayload {
   if (!value || typeof value !== 'object') return false;
@@ -244,7 +399,7 @@ function isBackupPayload(value: unknown): value is BackupPayload {
   if (payload.version !== 1 || !payload.data || typeof payload.data !== 'object') return false;
   const data = payload.data as Record<string, unknown>;
   const hasBaseEntity = (item: unknown) => Boolean(item && typeof item === 'object' && typeof (item as BaseEntity).id === 'string' && typeof (item as BaseEntity).userId === 'string' && typeof (item as BaseEntity).createdAt === 'string' && typeof (item as BaseEntity).updatedAt === 'string');
-  return backupArrayKeys.every((key) => Array.isArray(data[key]) && (data[key] as unknown[]).every(hasBaseEntity)) && hasBaseEntity(data.settings);
+  return backupArrayKeys.every((key) => !data[key] || (Array.isArray(data[key]) && (data[key] as unknown[]).every(hasBaseEntity))) && hasBaseEntity(data.settings);
 }
 
 function mergeById<T extends BaseEntity>(current: T[], incoming: T[]): T[] {
@@ -277,7 +432,6 @@ export class MockDataSource implements DataSource {
         return store;
       }
     } catch {
-      // A blocked or corrupted localStorage should never block the empty shell from opening.
       this.memoryOnly = true;
     }
     const store = initialStore();
@@ -291,7 +445,6 @@ export class MockDataSource implements DataSource {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
     } catch {
-      // Keep the current in-memory session usable if storage quota/privacy settings disallow writes.
       this.memoryOnly = true;
     }
   }
@@ -313,7 +466,6 @@ export class MockDataSource implements DataSource {
     return Object.assign(entity, patch, { updatedAt: timestamp() }) as T;
   }
 
-  /** Adds a non-destructive, 12-month data set to an untouched finance workspace. */
   async generateDemoData(): Promise<number> {
     return this.mutate((store) => {
       if (store.transactions.length > 0) return 0;
@@ -324,22 +476,22 @@ export class MockDataSource implements DataSource {
     });
   }
 
-  /** Adds habits, check-ins and four-level plans to an untouched discipline workspace. */
   async generateDisciplineDemoData(): Promise<number> {
     return this.mutate((store) => demoDisciplineStore(store));
   }
 
-  /** Adds physical assets and subscriptions to an untouched asset workspace. */
+  async generateReadingDemoData(): Promise<number> {
+    return this.mutate((store) => demoReadingStore(store));
+  }
+
   async generateAssetsDemoData(): Promise<number> {
     return this.mutate((store) => demoAssetsStore(store));
   }
 
-  /** Adds a compact, image-inclusive timeline to an untouched moments workspace. */
   async generateMomentsDemoData(): Promise<number> {
     return this.mutate((store) => demoMomentsStore(store));
   }
 
-  /** Generates every domain's demo data in dependency order, without overwriting existing records. */
   async generateAllDemoData(): Promise<number> {
     return this.mutate((store) => {
       let created = 0;
@@ -350,6 +502,7 @@ export class MockDataSource implements DataSource {
         created += transactions.length;
       }
       created += demoDisciplineStore(store);
+      created += demoReadingStore(store);
       created += demoAssetsStore(store);
       created += demoMomentsStore(store);
       return created;
@@ -430,6 +583,70 @@ export class MockDataSource implements DataSource {
       const nextOrder = store.plans.filter((item) => item.level === 'day' && item.period === to).length;
       pending.forEach((plan, index) => this.touch(plan, { period: to, order: nextOrder + index }));
       return pending.length;
+    }),
+  };
+
+  books = {
+    list: (filter: BookFilter = {}) => this.query((store) => {
+      return store.books
+        .filter((item) => !filter.status || item.status === filter.status)
+        .filter((item) => !filter.category || item.category === filter.category)
+        .filter((item) => !filter.keyword || item.title.toLowerCase().includes(filter.keyword.toLowerCase()) || (item.author && item.author.toLowerCase().includes(filter.keyword.toLowerCase())))
+        .sort((a, b) => (b.status === 'reading' ? 1 : 0) - (a.status === 'reading' ? 1 : 0) || b.updatedAt.localeCompare(a.updatedAt));
+    }),
+    get: (bookId: string) => this.query((store) => store.books.find((item) => item.id === bookId) ?? null),
+    create: (input: BookInput) => this.mutate((store) => {
+      const entity: Book = { ...base(), ...input };
+      store.books.push(entity);
+      return entity;
+    }),
+    update: (bookId: string, patch: Partial<BookInput>) => this.mutate((store) => {
+      const entity = store.books.find((item) => item.id === bookId);
+      if (!entity) throw new Error('未找到该书籍');
+      return this.touch(entity, patch);
+    }),
+    remove: (bookId: string) => this.mutate((store) => {
+      store.books = store.books.filter((item) => item.id !== bookId);
+      store.readingLogs = store.readingLogs.filter((item) => item.bookId !== bookId);
+      store.bookNotes = store.bookNotes.filter((item) => item.bookId !== bookId);
+    }),
+    logProgress: (bookId: string, input: ReadingLogInput) => this.mutate((store) => {
+      const book = store.books.find((item) => item.id === bookId);
+      if (!book) throw new Error('未找到该书籍');
+      const page = Math.min(input.page, book.totalPages);
+      const prevPage = book.currentPage || 0;
+      const pagesRead = Math.max(0, page - prevPage);
+      const log: ReadingLog = { ...base(), ...input, page, pagesRead: input.pagesRead ?? pagesRead };
+      store.readingLogs.push(log);
+
+      const patch: Partial<Book> = { currentPage: page };
+      if (page >= book.totalPages && book.status !== 'finished') {
+        patch.status = 'finished';
+        patch.finishDate = input.date || dateToday();
+      } else if (page > 0 && book.status === 'queue') {
+        patch.status = 'reading';
+        patch.startDate = book.startDate || input.date || dateToday();
+      }
+      this.touch(book, patch);
+      return log;
+    }),
+    listLogs: (bookId?: string) => this.query((store) => {
+      return store.readingLogs
+        .filter((item) => !bookId || item.bookId === bookId)
+        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+    }),
+    createNote: (bookId: string, input: BookNoteInput) => this.mutate((store) => {
+      const entity: BookNote = { ...base(), ...input, bookId };
+      store.bookNotes.push(entity);
+      return entity;
+    }),
+    listNotes: (bookId?: string) => this.query((store) => {
+      return store.bookNotes
+        .filter((item) => !bookId || item.bookId === bookId)
+        .sort((a, b) => (a.pageNumber ?? 0) - (b.pageNumber ?? 0) || b.createdAt.localeCompare(a.createdAt));
+    }),
+    removeNote: (noteId: string) => this.mutate((store) => {
+      store.bookNotes = store.bookNotes.filter((item) => item.id !== noteId);
     }),
   };
 
@@ -549,15 +766,18 @@ export class MockDataSource implements DataSource {
       if (mode === 'replace') {
         Object.assign(store, incoming);
       } else {
-        store.habits = mergeById(store.habits, incoming.habits);
-        store.habitCheckIns = mergeById(store.habitCheckIns, incoming.habitCheckIns);
-        store.plans = mergeById(store.plans, incoming.plans);
-        store.categories = mergeById(store.categories, incoming.categories);
-        store.accounts = mergeById(store.accounts, incoming.accounts);
-        store.transactions = mergeById(store.transactions, incoming.transactions);
-        store.budgets = mergeById(store.budgets, incoming.budgets);
-        store.assets = mergeById(store.assets, incoming.assets);
-        store.moments = mergeById(store.moments, incoming.moments);
+        store.habits = mergeById(store.habits, incoming.habits || []);
+        store.habitCheckIns = mergeById(store.habitCheckIns, incoming.habitCheckIns || []);
+        store.plans = mergeById(store.plans, incoming.plans || []);
+        store.books = mergeById(store.books, incoming.books || []);
+        store.readingLogs = mergeById(store.readingLogs, incoming.readingLogs || []);
+        store.bookNotes = mergeById(store.bookNotes, incoming.bookNotes || []);
+        store.categories = mergeById(store.categories, incoming.categories || []);
+        store.accounts = mergeById(store.accounts, incoming.accounts || []);
+        store.transactions = mergeById(store.transactions, incoming.transactions || []);
+        store.budgets = mergeById(store.budgets, incoming.budgets || []);
+        store.assets = mergeById(store.assets, incoming.assets || []);
+        store.moments = mergeById(store.moments, incoming.moments || []);
         store.settings = incoming.settings;
       }
       migrateStore(store);
@@ -574,6 +794,7 @@ export class MockDataSource implements DataSource {
       const completedPlans = todayPlans.filter((item) => item.status === 'completed').length;
       const completedHabits = store.habits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today)).length;
       const month = today.slice(0, 7);
+      const year = today.slice(0, 4);
       const expenses = store.transactions.filter((item) => item.type === 'expense');
       const total = (items: Transaction[]) => items.reduce((sum, item) => sum + item.amount, 0);
       const currentBudget = store.budgets.find((item) => item.period === month);
@@ -583,6 +804,11 @@ export class MockDataSource implements DataSource {
         .map((asset) => ({ asset, daysUntil: daysUntil(asset.expireDate ?? asset.warrantyUntil as string) }))
         .filter((item) => item.daysUntil <= 30)
         .sort((a, b) => a.daysUntil - b.daysUntil);
+
+      const activeBooks = store.books.filter((item) => item.status === 'reading');
+      const finishedThisYear = store.books.filter((item) => item.status === 'finished' && (item.finishDate ? item.finishDate.startsWith(year) : true)).length;
+      const totalPagesRead = store.readingLogs.reduce((sum, item) => sum + item.pagesRead, 0);
+
       return {
         today,
         plan: { completed: completedPlans, total: todayPlans.length },
@@ -597,6 +823,13 @@ export class MockDataSource implements DataSource {
         overduePlans,
         todayPlans,
         recentMoments: [...store.moments].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3),
+        reading: {
+          currentBook: activeBooks[0],
+          activeBooks,
+          annualTarget: store.settings.annualReadingTarget || 12,
+          finishedThisYear,
+          totalPagesRead,
+        },
       };
     }),
     finance: (month = monthToday()) => this.query((store) => {
@@ -621,6 +854,36 @@ export class MockDataSource implements DataSource {
           income: sum(store.transactions.filter((item) => item.type === 'income' && item.date.startsWith(period))),
           expense: sum(store.transactions.filter((item) => item.type === 'expense' && item.date.startsWith(period))),
         })),
+      };
+    }),
+    reading: (targetYear = yearToday()) => this.query((store) => {
+      const yearStr = String(targetYear);
+      const activeBooks = store.books.filter((item) => item.status === 'reading');
+      const finishedBooks = store.books.filter((item) => item.status === 'finished');
+      const finishedThisYear = finishedBooks.filter((item) => item.finishDate ? item.finishDate.startsWith(yearStr) : true).length;
+      const totalPagesRead = store.readingLogs.reduce((sum, item) => sum + item.pagesRead, 0);
+
+      const months = Array.from({ length: 12 }, (_, i) => `${yearStr}-${String(i + 1).padStart(2, '0')}`);
+      const readingTrend = months.map((period) => ({
+        period,
+        pagesRead: store.readingLogs.filter((item) => item.date.startsWith(period)).reduce((sum, item) => sum + item.pagesRead, 0),
+        booksFinished: finishedBooks.filter((item) => item.finishDate && item.finishDate.startsWith(period)).length,
+      }));
+
+      const categoryCounts: Record<string, number> = {};
+      store.books.forEach((b) => {
+        const cat = b.category || '未分类';
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
+      const categoryDistribution = Object.entries(categoryCounts).map(([category, count]) => ({ category, count }));
+
+      return {
+        currentReadingCount: activeBooks.length,
+        finishedThisYear,
+        totalPagesRead,
+        annualTarget: store.settings.annualReadingTarget || 12,
+        readingTrend,
+        categoryDistribution,
       };
     }),
   };

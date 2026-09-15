@@ -24,7 +24,12 @@
 .asset-card-footer .ant-space { flex: 0 0 auto; }
 .asset-note { min-height: 18px; overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
-[data-theme='dark'] .asset-card-icon { background: linear-gradient(135deg, rgba(61,162,93,.24), rgba(82,193,151,.17)); border-color: rgba(255,255,255,.10); }
-[data-theme='dark'] .asset-deadline { border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.05); }
+[data-theme='dark'] .asset-card { border-color: rgba(255,255,255,.08) !important; }
+[data-theme='dark'] .asset-card-icon { background: linear-gradient(135deg, rgba(52,211,153,.20), rgba(56,189,248,.12)); border-color: rgba(255,255,255,.10); box-shadow: none; }
+[data-theme='dark'] .asset-deadline { border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.04); box-shadow: none; color: #f1f5f9; }
+[data-theme='dark'] .asset-deadline.is-critical { border-color: rgba(248,113,113,.25); color: #f87171; background: rgba(248,113,113,.12); }
+[data-theme='dark'] .asset-deadline.is-soon { border-color: rgba(251,191,36,.25); color: #fbbf24; background: rgba(251,191,36,.12); }
+[data-theme='dark'] .asset-card-details { color: #94a3b8; }
+[data-theme='dark'] .asset-card-footer { border-top-color: rgba(255,255,255,.06); }
 
 @media (max-width: 640px) { .form-three-columns { grid-template-columns: 1fr 1fr; } .form-three-columns > :first-child { grid-column: 1 / -1; } }
