@@ -8,6 +8,7 @@ import { calculateHabitStats, today } from '../lib/dates';
 import { HabitFormModal } from '../components/discipline/HabitFormModal';
 import { HabitHeatmap } from '../components/discipline/HabitHeatmap';
 import { HabitStatBlocks } from '../components/discipline/HabitStatBlocks';
+import { CountUp, fireCelebrationCannon, fireConfetti, SpotlightCard } from '../components/ui';
 import '../styles/discipline.css';
 
 type HabitView = 'active' | 'archived';
@@ -56,8 +57,18 @@ export function HabitsPage() {
   const toggle = async (habit: Habit, date: ISODate) => {
     const exists = (checkIns[habit.id] ?? []).some((item) => item.date === date);
     try {
-      if (exists) { await dataSource.habits.uncheck(habit.id, date); message.success(`${date} 的打卡已取消`); }
-      else { await dataSource.habits.checkIn(habit.id, date); message.success(date === today() ? '今日打卡完成！' : '补打成功'); }
+      if (exists) {
+        await dataSource.habits.uncheck(habit.id, date);
+        message.success(`${date} 的打卡已取消`);
+      } else {
+        await dataSource.habits.checkIn(habit.id, date);
+        if (date === today()) {
+          fireConfetti();
+          message.success('今日打卡完成！太棒了 🎉');
+        } else {
+          message.success('补打成功');
+        }
+      }
       await reload();
     } catch (error) { message.error(error instanceof Error ? error.message : '打卡失败'); }
   };
@@ -68,8 +79,12 @@ export function HabitsPage() {
   const seedDemo = async () => {
     try {
       const created = await generateDisciplineDemoData();
-      if (created) message.success(`已生成 ${created} 条演示自律数据`);
-      else message.info('已有习惯或计划，未覆盖你的数据');
+      if (created) {
+        fireCelebrationCannon();
+        message.success(`已生成 ${created} 条演示自律数据`);
+      } else {
+        message.info('已有习惯或计划，未覆盖你的数据');
+      }
       await reload();
     } catch (error) { message.error(error instanceof Error ? error.message : '生成演示数据失败'); }
   };
@@ -81,8 +96,26 @@ export function HabitsPage() {
     </section>
 
     <Row gutter={[16, 16]} className="discipline-summary">
-      <Col xs={24} md={14}><Card><Typography.Text type="secondary">今日打卡进度</Typography.Text><Typography.Title level={2} style={{ margin: '4px 0 0' }}>{checkedToday} <Typography.Text type="secondary">/ {activeHabits.length}</Typography.Text></Typography.Title><Progress percent={activeHabits.length ? Math.round(checkedToday / activeHabits.length * 100) : 0} showInfo={false} strokeColor="#2f9c67" /></Card></Col>
-      <Col xs={24} md={10}><Card><Typography.Text type="secondary">今天</Typography.Text><Typography.Title level={3} style={{ margin: '7px 0 0' }}>{new Date(`${today()}T12:00:00Z`).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long', timeZone: 'UTC' })}</Typography.Title><Typography.Text type="secondary">点击「完成」即可记录今天的坚持</Typography.Text></Card></Col>
+      <Col xs={24} md={14}>
+        <SpotlightCard className="stat-card" spotlightColor="rgba(35, 141, 91, 0.16)">
+          <div style={{ padding: 20 }}>
+            <Typography.Text type="secondary">今日打卡进度</Typography.Text>
+            <Typography.Title level={2} style={{ margin: '4px 0 0' }}>
+              <CountUp to={checkedToday} /> <Typography.Text type="secondary">/ <CountUp to={activeHabits.length} /></Typography.Text>
+            </Typography.Title>
+            <Progress percent={activeHabits.length ? Math.round(checkedToday / activeHabits.length * 100) : 0} showInfo={false} strokeColor="#2f9c67" />
+          </div>
+        </SpotlightCard>
+      </Col>
+      <Col xs={24} md={10}>
+        <SpotlightCard className="stat-card" spotlightColor="rgba(77, 191, 157, 0.16)">
+          <div style={{ padding: 20 }}>
+            <Typography.Text type="secondary">今天</Typography.Text>
+            <Typography.Title level={3} style={{ margin: '7px 0 0' }}>{new Date(`${today()}T12:00:00Z`).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long', timeZone: 'UTC' })}</Typography.Title>
+            <Typography.Text type="secondary">点击「完成」即可记录今天的坚持</Typography.Text>
+          </div>
+        </SpotlightCard>
+      </Col>
     </Row>
 
     <div className="finance-toolbar"><Segmented<HabitView> value={view} onChange={setView} options={[{ label: `进行中 (${activeHabits.length})`, value: 'active' }, { label: `已归档 (${habits.length - activeHabits.length})`, value: 'archived' }]} /></div>
@@ -101,11 +134,45 @@ export function HabitsPage() {
 function HabitCard({ habit, checkIns, selected, onSelect, onToggle, onEdit, onDelete }: { habit: Habit; checkIns: HabitCheckIn[]; selected: boolean; onSelect: () => void; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
   const checked = checkIns.some((item) => item.date === today());
   const stats = calculateHabitStats(habit, checkIns);
-  return <Col xs={24} md={12} xl={8}><Card className={`habit-card ${selected ? 'is-selected' : ''}`} style={{ '--habit-color': habit.color } as CSSProperties} onClick={onSelect}>
-    <div className="habit-card-stripe" /><div className="habit-card-title"><span className="habit-icon" style={{ background: `${habit.color}18` }}>{habit.icon}</span><div><h3>{habit.name}</h3><Typography.Text type="secondary" style={{ fontSize: 12 }}>{frequencyLabel(habit)}</Typography.Text></div></div>
-    <div className="habit-meta"><span><FireOutlined style={{ color: '#ef9c38' }} /> 连续 {stats.currentStreak} 天</span>{habit.reminderTime ? <span>🕘 {habit.reminderTime}</span> : <span>无需提醒</span>}</div>
-    <Progress percent={stats.recent30Rate} showInfo={false} strokeColor={habit.color} size="small" />
-    <div className="habit-actions"><Button type={checked ? 'default' : 'primary'} icon={<CheckOutlined />} disabled={habit.archived} onClick={(event) => { event.stopPropagation(); onToggle(); }}>{checked ? '已完成' : '完成今日打卡'}</Button><Button type="text" icon={<EditOutlined />} onClick={(event) => { event.stopPropagation(); onEdit(); }} aria-label="编辑习惯" /><Popconfirm title="删除这个习惯？" description="所有历史打卡也会删除。" onConfirm={(event) => { event?.stopPropagation(); onDelete(); }} okText="删除" cancelText="取消"><Button type="text" danger icon={<DeleteOutlined />} onClick={(event) => event.stopPropagation()} aria-label="删除习惯" /></Popconfirm></div>
-    {habit.archived && <Tag style={{ marginTop: 10 }}>已归档</Tag>}
-  </Card></Col>;
+  const habitGlow = habit.color ? `${habit.color}26` : 'rgba(35, 141, 91, 0.16)';
+
+  return <Col xs={24} md={12} xl={8}>
+    <SpotlightCard
+      className={`habit-card ${selected ? 'is-selected' : ''}`}
+      spotlightColor={habitGlow}
+      style={{ '--habit-color': habit.color } as CSSProperties}
+      onClick={onSelect}
+    >
+      <div style={{ padding: '20px' }}>
+        <div className="habit-card-stripe" />
+        <div className="habit-card-title">
+          <span className="habit-icon" style={{ background: `${habit.color}18` }}>{habit.icon}</span>
+          <div>
+            <h3>{habit.name}</h3>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{frequencyLabel(habit)}</Typography.Text>
+          </div>
+        </div>
+        <div className="habit-meta">
+          <span><FireOutlined style={{ color: '#ef9c38' }} /> 连续 {stats.currentStreak} 天</span>
+          {habit.reminderTime ? <span>🕘 {habit.reminderTime}</span> : <span>无需提醒</span>}
+        </div>
+        <Progress percent={stats.recent30Rate} showInfo={false} strokeColor={habit.color} size="small" />
+        <div className="habit-actions">
+          <Button
+            type={checked ? 'default' : 'primary'}
+            icon={<CheckOutlined />}
+            disabled={habit.archived}
+            onClick={(event) => { event.stopPropagation(); onToggle(); }}
+          >
+            {checked ? '已完成' : '完成今日打卡'}
+          </Button>
+          <Button type="text" icon={<EditOutlined />} onClick={(event) => { event.stopPropagation(); onEdit(); }} aria-label="编辑习惯" />
+          <Popconfirm title="删除这个习惯？" description="所有历史打卡也会删除。" onConfirm={(event) => { event?.stopPropagation(); onDelete(); }} okText="删除" cancelText="取消">
+            <Button type="text" danger icon={<DeleteOutlined />} onClick={(event) => event.stopPropagation()} aria-label="删除习惯" />
+          </Popconfirm>
+        </div>
+        {habit.archived && <Tag style={{ marginTop: 10 }}>已归档</Tag>}
+      </div>
+    </SpotlightCard>
+  </Col>;
 }

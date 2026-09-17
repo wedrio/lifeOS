@@ -13,4 +13,16 @@ export default defineConfig({
       '@lifeos/shared': fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url)),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', 'zustand'],
+          'vendor-antd': ['antd', '@ant-design/icons'],
+          'vendor-motion': ['framer-motion', 'canvas-confetti'],
+        },
+      },
+    },
+  },
 });

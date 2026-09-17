@@ -13,8 +13,8 @@ import type { DashboardStats, Plan } from '@lifeos/shared';
 import { useNavigate } from 'react-router-dom';
 import { dataSource, generateAllDemoData } from '../data';
 import { addDays, today } from '../lib/dates';
-import { formatCents } from '../lib/finance';
 import { BookCover } from '../components/reading/BookCover';
+import { CountUp, fireCelebrationCannon, fireConfetti, ShinyText, SpotlightCard, TiltedCard } from '../components/ui';
 import '../styles/dashboard.css';
 
 export function DashboardPage() {
@@ -50,7 +50,12 @@ export function DashboardPage() {
         status: completed ? 'completed' : 'not_started',
         progress: completed ? 100 : 0,
       });
-      message.success(completed ? '今日计划已完成' : '计划已恢复');
+      if (completed) {
+        fireConfetti();
+        message.success('今日计划已完成！');
+      } else {
+        message.info('计划已恢复');
+      }
       await reload();
     } catch (error) {
       message.error(error instanceof Error ? error.message : '更新计划失败');
@@ -61,8 +66,12 @@ export function DashboardPage() {
     setGenerating(true);
     try {
       const created = await generateAllDemoData();
-      if (created) message.success(`已补充 ${created} 条演示数据`);
-      else message.info('所有板块已有数据，无需填充');
+      if (created) {
+        fireCelebrationCannon();
+        message.success(`已补充 ${created} 条演示数据`);
+      } else {
+        message.info('所有板块已有数据，无需填充');
+      }
       await reload();
     } catch (error) {
       message.error(error instanceof Error ? error.message : '生成演示数据失败');
@@ -99,7 +108,7 @@ export function DashboardPage() {
       <Card className="dashboard-welcome" bordered={false}>
         <div className="dashboard-welcome-row">
           <div className="dashboard-hero-copy">
-            <span className="dashboard-eyebrow">LIFE CANVAS · DAILY EDITION</span>
+            <ShinyText className="dashboard-eyebrow">LIFE CANVAS · DAILY EDITION</ShinyText>
             <h1>今天的生活，<br />值得被认真编排。</h1>
             <p>从一次打卡、一笔记录、一页阅读，开始把想过的生活变成今天的行动。</p>
           </div>
@@ -118,39 +127,65 @@ export function DashboardPage() {
             icon={<CheckCircleOutlined />}
             variant="emerald"
             label="今日计划"
-            value={stats ? `${stats.plan.completed} / ${stats.plan.total}` : '—'}
             loading={loading}
             progress={planPercent}
-          />
+          >
+            {stats ? (
+              <>
+                <CountUp to={stats.plan.completed} /> / <CountUp to={stats.plan.total} />
+              </>
+            ) : (
+              '—'
+            )}
+          </MetricCard>
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <MetricCard
             icon={<CalendarOutlined />}
             variant="teal"
             label="习惯打卡"
-            value={stats ? `${stats.habits.completed} / ${stats.habits.total}` : '—'}
             loading={loading}
             progress={habitPercent}
-          />
+          >
+            {stats ? (
+              <>
+                <CountUp to={stats.habits.completed} /> / <CountUp to={stats.habits.total} />
+              </>
+            ) : (
+              '—'
+            )}
+          </MetricCard>
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <MetricCard
             icon={<ReadOutlined />}
             variant="emerald"
             label="纸质阅读"
-            value={stats?.reading ? `${stats.reading.finishedThisYear} / ${stats.reading.annualTarget} 本` : '—'}
             loading={loading}
             progress={stats?.reading?.annualTarget ? Math.min(100, Math.round((stats.reading.finishedThisYear / stats.reading.annualTarget) * 100)) : 0}
-          />
+          >
+            {stats?.reading ? (
+              <>
+                <CountUp to={stats.reading.finishedThisYear} /> / <CountUp to={stats.reading.annualTarget} /> 本
+              </>
+            ) : (
+              '—'
+            )}
+          </MetricCard>
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <MetricCard
             icon={<DollarOutlined />}
             variant="amber"
             label="今日支出"
-            value={stats ? formatCents(stats.finance.todayExpense) : '—'}
             loading={loading}
-          />
+          >
+            {stats ? (
+              <CountUp to={stats.finance.todayExpense / 100} prefix="¥" decimals={2} />
+            ) : (
+              '—'
+            )}
+          </MetricCard>
         </Col>
       </Row>
 
@@ -202,25 +237,27 @@ export function DashboardPage() {
             {loading ? (
               <Skeleton active paragraph={{ rows: 2 }} />
             ) : currentBook ? (
-              <div
-                style={{ display: 'flex', gap: 14, cursor: 'pointer' }}
-                onClick={() => navigate('/discipline/reading')}
-              >
-                <BookCover book={currentBook} size="sm" />
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <Typography.Text strong ellipsis style={{ fontSize: 14 }}>
-                    {currentBook.title}
-                  </Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 12, marginBottom: 6 }}>
-                    {currentBook.author || '未知作者'}
-                  </Typography.Text>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)' }}>
-                    <span>第 {currentBook.currentPage || 0} / {currentBook.totalPages} 页</span>
-                    <span>{bookPercent}%</span>
+              <TiltedCard maxTilt={8} scale={1.01} glare={false}>
+                <div
+                  style={{ display: 'flex', gap: 14, cursor: 'pointer', padding: '4px' }}
+                  onClick={() => navigate('/discipline/reading')}
+                >
+                  <BookCover book={currentBook} size="sm" />
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Typography.Text strong ellipsis style={{ fontSize: 14 }}>
+                      {currentBook.title}
+                    </Typography.Text>
+                    <Typography.Text type="secondary" style={{ fontSize: 12, marginBottom: 6 }}>
+                      {currentBook.author || '未知作者'}
+                    </Typography.Text>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)' }}>
+                      <span>第 {currentBook.currentPage || 0} / {currentBook.totalPages} 页</span>
+                      <span>{bookPercent}%</span>
+                    </div>
+                    <Progress percent={bookPercent} size="small" strokeColor="#34d399" showInfo={false} />
                   </div>
-                  <Progress percent={bookPercent} size="small" strokeColor="#34d399" showInfo={false} />
                 </div>
-              </div>
+              </TiltedCard>
             ) : (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前没有正在阅读的纸质书">
                 <Button type="primary" size="small" onClick={() => navigate('/discipline/reading')}>
@@ -382,32 +419,44 @@ function MetricCard({
   icon,
   variant,
   label,
-  value,
+  children,
   progress,
   loading,
 }: {
   icon: ReactNode;
   variant: 'emerald' | 'teal' | 'amber' | 'rose';
   label: string;
-  value: string;
+  children: ReactNode;
   progress?: number;
   loading: boolean;
 }) {
+  const variantGlow: Record<string, string> = {
+    emerald: 'rgba(35, 141, 91, 0.18)',
+    teal: 'rgba(77, 191, 157, 0.20)',
+    amber: 'rgba(239, 189, 104, 0.22)',
+    rose: 'rgba(233, 135, 150, 0.20)',
+  };
+
   return (
-    <Card className="stat-card">
-      <div className={`stat-icon ${variant}`}>{icon}</div>
-      <Typography.Text type="secondary">{label}</Typography.Text>
-      {loading ? (
-        <Skeleton.Input active size="small" style={{ display: 'block', width: 92, marginTop: 7 }} />
-      ) : (
-        <Typography.Title level={3} style={{ margin: '5px 0 0' }}>
-          {value}
-        </Typography.Title>
-      )}
-      {progress !== undefined && (
-        <Progress percent={progress} showInfo={false} size="small" strokeColor="#2f9c67" style={{ marginTop: 9 }} />
-      )}
-    </Card>
+    <SpotlightCard
+      className="stat-card"
+      spotlightColor={variantGlow[variant]}
+    >
+      <div style={{ padding: 20 }}>
+        <div className={`stat-icon ${variant}`}>{icon}</div>
+        <Typography.Text type="secondary">{label}</Typography.Text>
+        {loading ? (
+          <Skeleton.Input active size="small" style={{ display: 'block', width: 92, marginTop: 7 }} />
+        ) : (
+          <Typography.Title level={3} style={{ margin: '5px 0 0' }}>
+            {children}
+          </Typography.Title>
+        )}
+        {progress !== undefined && (
+          <Progress percent={progress} showInfo={false} size="small" strokeColor="#2f9c67" style={{ marginTop: 9 }} />
+        )}
+      </div>
+    </SpotlightCard>
   );
 }
 
@@ -423,13 +472,19 @@ function ActionCard({
   onClick: () => void;
 }) {
   return (
-    <Card size="small" className="action-card" onClick={onClick}>
-      <div className="action-icon">{icon}</div>
-      <Typography.Text strong>{title}</Typography.Text>
-      <br />
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        {description}
-      </Typography.Text>
-    </Card>
+    <SpotlightCard
+      className="action-card"
+      spotlightColor="rgba(35, 141, 91, 0.22)"
+      onClick={onClick}
+    >
+      <div style={{ padding: '16px' }}>
+        <div className="action-icon">{icon}</div>
+        <Typography.Text strong>{title}</Typography.Text>
+        <br />
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {description}
+        </Typography.Text>
+      </div>
+    </SpotlightCard>
   );
 }

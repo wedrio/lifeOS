@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Col, Empty, Input, Progress, Row, Skeleton, Statistic, Table, Typography, message } from 'antd';
+import { Card, Col, Empty, Input, Progress, Row, Skeleton, Table, Typography, message } from 'antd';
 import type { FinanceStats } from '@lifeos/shared';
 import { dataSource } from '../data';
 import { currentMonth, formatCents } from '../lib/finance';
+import { CountUp, SpotlightCard } from '../components/ui';
 import '../styles/finance.css';
 
 const colors = ['#2f9c67', '#53a8ff', '#54c5a1', '#f4a261', '#e76f8a', '#a77bdc', '#78909c', '#e9c46a'];
@@ -29,9 +30,36 @@ export function FinanceStatsPage() {
       <Input type="month" value={period} onChange={(event) => setPeriod(event.target.value || currentMonth())} style={{ width: 148 }} aria-label="报表月份" />
     </section>
     <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-      <Col xs={24} sm={8}><Card><Statistic title="本月收入" value={(stats?.income ?? 0) / 100} precision={2} prefix="¥" valueStyle={{ color: '#23936d' }} /></Card></Col>
-      <Col xs={24} sm={8}><Card><Statistic title="本月支出" value={(stats?.expense ?? 0) / 100} precision={2} prefix="¥" valueStyle={{ color: '#db5161' }} /></Card></Col>
-      <Col xs={24} sm={8}><Card><Statistic title={net >= 0 ? '本月结余' : '本月缺口'} value={Math.abs(net) / 100} precision={2} prefix="¥" valueStyle={{ color: net >= 0 ? '#2f9c67' : '#db5161' }} /></Card></Col>
+      <Col xs={24} sm={8}>
+        <SpotlightCard className="stat-card" spotlightColor="rgba(35, 147, 109, 0.16)">
+          <div style={{ padding: 20 }}>
+            <Typography.Text type="secondary">本月收入</Typography.Text>
+            <Typography.Title level={2} style={{ margin: '4px 0 0', color: '#23936d' }}>
+              <CountUp to={(stats?.income ?? 0) / 100} decimals={2} prefix="¥" />
+            </Typography.Title>
+          </div>
+        </SpotlightCard>
+      </Col>
+      <Col xs={24} sm={8}>
+        <SpotlightCard className="stat-card" spotlightColor="rgba(219, 81, 97, 0.16)">
+          <div style={{ padding: 20 }}>
+            <Typography.Text type="secondary">本月支出</Typography.Text>
+            <Typography.Title level={2} style={{ margin: '4px 0 0', color: '#db5161' }}>
+              <CountUp to={(stats?.expense ?? 0) / 100} decimals={2} prefix="¥" />
+            </Typography.Title>
+          </div>
+        </SpotlightCard>
+      </Col>
+      <Col xs={24} sm={8}>
+        <SpotlightCard className="stat-card" spotlightColor={net >= 0 ? 'rgba(47, 156, 103, 0.16)' : 'rgba(219, 81, 97, 0.16)'}>
+          <div style={{ padding: 20 }}>
+            <Typography.Text type="secondary">{net >= 0 ? '本月结余' : '本月缺口'}</Typography.Text>
+            <Typography.Title level={2} style={{ margin: '4px 0 0', color: net >= 0 ? '#2f9c67' : '#db5161' }}>
+              <CountUp to={Math.abs(net) / 100} decimals={2} prefix="¥" />
+            </Typography.Title>
+          </div>
+        </SpotlightCard>
+      </Col>
     </Row>
     <Row gutter={[16, 16]}>
       <Col xs={24} xl={15}><Card title="近 12 个月收支趋势" extra={<ChartLegend />}><TrendChart data={stats?.monthlyTrend ?? []} loading={loading} /></Card></Col>

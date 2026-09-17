@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { addDays, today } from '../lib/dates';
 import { formatCents } from '../lib/finance';
 import { MomentFormModal, type MomentLinkOption } from '../components/moments/MomentFormModal';
+import { fireCelebrationCannon, SpotlightCard } from '../components/ui';
 import '../styles/moments.css';
 
 type MomentView = 'timeline' | 'calendar';
@@ -56,8 +57,12 @@ export function MomentsPage() {
   const seedDemo = async () => {
     try {
       const created = await generateMomentsDemoData();
-      if (created) message.success(`已生成 ${created} 条演示日常`);
-      else message.info('已有日常，未覆盖你的数据');
+      if (created) {
+        fireCelebrationCannon();
+        message.success(`已生成 ${created} 条演示日常`);
+      } else {
+        message.info('已有日常，未覆盖你的数据');
+      }
       await reload();
     } catch (error) { message.error(error instanceof Error ? error.message : '生成演示数据失败'); }
   };
@@ -85,7 +90,7 @@ function Timeline({ moments, linkLabels, onEdit, onDelete }: { moments: Moment[]
 
 function MomentCard({ moment, linkLabels, onEdit, onDelete }: { moment: Moment; linkLabels: Map<string, string>; onEdit: () => void; onDelete: () => void }) {
   const time = new Date(moment.createdAt).toLocaleString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-  return <Card className="moment-card"><div className="moment-card-head"><div><Typography.Text strong>{[moment.mood, moment.weather].filter(Boolean).join(' ') || '📔'} 我的日常</Typography.Text><div className="moment-time">{time}{moment.location ? ` · 📍 ${moment.location}` : ''}</div></div><Space size={0}><Button type="text" size="small" icon={<EditOutlined />} onClick={onEdit} aria-label="编辑日常" /><Popconfirm title="删除这条日常？" onConfirm={onDelete} okText="删除" cancelText="取消"><Button type="text" danger size="small" icon={<DeleteOutlined />} aria-label="删除日常" /></Popconfirm></Space></div><div className="moment-content">{moment.content}</div>{moment.imageUrls.length > 0 && <Image.PreviewGroup><div className={`moment-images ${moment.imageUrls.length === 1 ? 'one' : moment.imageUrls.length === 2 ? 'two' : ''}`}>{moment.imageUrls.map((url, index) => <Image key={`${url.slice(0, 32)}-${index}`} src={url} alt={`${time} 的图片 ${index + 1}`} />)}</div></Image.PreviewGroup>}<div className="moment-tags">{moment.tags.map((tag) => <Tag color="purple" key={tag}>#{tag}</Tag>)}</div>{moment.links.length > 0 && <div className="moment-links">{moment.links.map((link) => <Tag color="blue" key={`${link.type}-${link.id}`}>🔗 {linkLabels.get(`${link.type}:${link.id}`) ?? '关联记录已删除'}</Tag>)}</div>}<div className="moment-card-footer"><Typography.Text type="secondary" style={{ fontSize: 12 }}>{moment.imageUrls.length ? `${moment.imageUrls.length} 张图片` : '纯文字记录'}</Typography.Text><Typography.Text type="secondary" style={{ fontSize: 12 }}>记录于 {moment.createdAt.slice(0, 10)}</Typography.Text></div></Card>;
+  return <SpotlightCard className="moment-card" spotlightColor="rgba(167, 139, 250, 0.16)"><div style={{ padding: 22 }}><div className="moment-card-head"><div><Typography.Text strong>{[moment.mood, moment.weather].filter(Boolean).join(' ') || '📔'} 我的日常</Typography.Text><div className="moment-time">{time}{moment.location ? ` · 📍 ${moment.location}` : ''}</div></div><Space size={0}><Button type="text" size="small" icon={<EditOutlined />} onClick={onEdit} aria-label="编辑日常" /><Popconfirm title="删除这条日常？" onConfirm={onDelete} okText="删除" cancelText="取消"><Button type="text" danger size="small" icon={<DeleteOutlined />} aria-label="删除日常" /></Popconfirm></Space></div><div className="moment-content">{moment.content}</div>{moment.imageUrls.length > 0 && <Image.PreviewGroup><div className={`moment-images ${moment.imageUrls.length === 1 ? 'one' : moment.imageUrls.length === 2 ? 'two' : ''}`}>{moment.imageUrls.map((url, index) => <Image key={`${url.slice(0, 32)}-${index}`} src={url} alt={`${time} 的图片 ${index + 1}`} />)}</div></Image.PreviewGroup>}<div className="moment-tags">{moment.tags.map((tag) => <Tag color="purple" key={tag}>#{tag}</Tag>)}</div>{moment.links.length > 0 && <div className="moment-links">{moment.links.map((link) => <Tag color="blue" key={`${link.type}-${link.id}`}>🔗 {linkLabels.get(`${link.type}:${link.id}`) ?? '关联记录已删除'}</Tag>)}</div>}<div className="moment-card-footer"><Typography.Text type="secondary" style={{ fontSize: 12 }}>{moment.imageUrls.length ? `${moment.imageUrls.length} 张图片` : '纯文字记录'}</Typography.Text><Typography.Text type="secondary" style={{ fontSize: 12 }}>记录于 {moment.createdAt.slice(0, 10)}</Typography.Text></div></div></SpotlightCard>;
 }
 
 function CalendarView({ month, weekStartsOn, selectedDate, momentsByDate, onSelect, linkLabels, onEdit }: { month: string; weekStartsOn: 0 | 1; selectedDate: string; momentsByDate: Map<string, Moment[]>; onSelect: (date: string) => void; linkLabels: Map<string, string>; onEdit: (moment: Moment) => void }) {

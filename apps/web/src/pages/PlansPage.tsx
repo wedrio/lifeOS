@@ -5,6 +5,7 @@ import type { Plan, PlanLevel, PlanStatus } from '@lifeos/shared';
 import { dataSource, generateDisciplineDemoData } from '../data';
 import { addDays, defaultPeriod, periodInputType, periodLabel, shiftPlanPeriod, today } from '../lib/dates';
 import { PlanFormModal } from '../components/discipline/PlanFormModal';
+import { fireCelebrationCannon, fireConfetti, SpotlightCard } from '../components/ui';
 import '../styles/discipline.css';
 
 const levelOptions: Array<{ label: string; value: PlanLevel }> = [{ label: '年计划', value: 'year' }, { label: '月计划', value: 'month' }, { label: '周计划', value: 'week' }, { label: '日计划', value: 'day' }];
@@ -49,7 +50,12 @@ export function PlansPage() {
     try {
       const completed = plan.status !== 'completed';
       await dataSource.plans.update(plan.id, { status: completed ? 'completed' : 'not_started', progress: completed ? 100 : 0 });
-      message.success(completed ? '计划已完成' : '计划已恢复为待开始');
+      if (completed) {
+        fireConfetti();
+        message.success('计划已完成！🎯');
+      } else {
+        message.info('计划已恢复为待开始');
+      }
       await reload();
     } catch (error) { message.error(error instanceof Error ? error.message : '更新失败'); }
   };
@@ -75,15 +81,41 @@ export function PlansPage() {
   const seedDemo = async () => {
     try {
       const created = await generateDisciplineDemoData();
-      if (created) message.success(`已生成 ${created} 条演示自律数据`);
-      else message.info('已有习惯或计划，未覆盖你的数据');
+      if (created) {
+        fireCelebrationCannon();
+        message.success(`已生成 ${created} 条演示自律数据`);
+      } else {
+        message.info('已有习惯或计划，未覆盖你的数据');
+      }
       await reload();
     } catch (error) { message.error(error instanceof Error ? error.message : '生成演示数据失败'); }
   };
 
   return <>
     <section className="page-heading"><div><h1>四级计划</h1><p>从年度方向拆解到今天，让每个行动都与目标有关。</p></div><Space wrap><Button onClick={() => void seedDemo()}>填充演示数据</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor()}>新建计划</Button></Space></section>
-    <Card style={{ marginBottom: 16 }}><div className="finance-toolbar"><Segmented<PlanLevel> value={level} onChange={changeLevel} options={levelOptions} /><Space size={14}><span style={{ color: '#77798a', fontSize: 13 }}>自动结转未完成日计划</span><Switch size="small" checked={autoRollOver} onChange={(enabled) => void setRollOver(enabled)} /><div className="plan-period-control"><Button type="text" icon={<LeftOutlined />} aria-label="上一周期" onClick={() => setPeriod((current) => shiftPlanPeriod(level, current, -1))} /><Tooltip title={periodLabel(level, period)}><input className="ant-input" type={periodInputType(level)} value={period} onChange={(event) => setPeriod(event.target.value || defaultPeriod(level))} aria-label="计划周期" /></Tooltip><Button type="text" icon={<RightOutlined />} aria-label="下一周期" onClick={() => setPeriod((current) => shiftPlanPeriod(level, current, 1))} /></div></Space></div><div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Typography.Text type="secondary">{periodLabel(level, period)} 完成度</Typography.Text><Progress percent={completion} showInfo={false} strokeColor="#2f9c67" style={{ maxWidth: 320 }} /></div></Card>
+    <SpotlightCard className="plan-summary-card" spotlightColor="rgba(35, 141, 91, 0.16)" style={{ marginBottom: 16 }}>
+      <div style={{ padding: 20 }}>
+        <div className="finance-toolbar">
+          <Segmented<PlanLevel> value={level} onChange={changeLevel} options={levelOptions} />
+          <Space size={14}>
+            <span style={{ color: '#77798a', fontSize: 13 }}>自动结转未完成日计划</span>
+            <Switch size="small" checked={autoRollOver} onChange={(enabled) => void setRollOver(enabled)} />
+            <div className="plan-period-control">
+              <Button type="text" icon={<LeftOutlined />} aria-label="上一周期" onClick={() => setPeriod((current) => shiftPlanPeriod(level, current, -1))} />
+              <Tooltip title={periodLabel(level, period)}>
+                <input className="ant-input" type={periodInputType(level)} value={period} onChange={(event) => setPeriod(event.target.value || defaultPeriod(level))} aria-label="计划周期" />
+              </Tooltip>
+              <Button type="text" icon={<RightOutlined />} aria-label="下一周期" onClick={() => setPeriod((current) => shiftPlanPeriod(level, current, 1))} />
+            </div>
+          </Space>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+          <Typography.Text type="secondary">{periodLabel(level, period)} 完成度</Typography.Text>
+          <Progress percent={completion} showInfo={false} strokeColor="#2f9c67" style={{ maxWidth: 320 }} />
+        </div>
+      </div>
+    </SpotlightCard>
+
     <Card title={level === 'day' && period === today() ? '今天的计划' : `${periodLabel(level, period)} 的计划`} extra={<Typography.Text type="secondary">{plans.length} 项</Typography.Text>}>
       {loading ? <Skeleton active paragraph={{ rows: 8 }} /> : plans.length === 0 ? <Empty description="这个周期还没有计划"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty> : <div className="plan-list">{plans.map((plan, index) => <PlanItem key={plan.id} plan={plan} parent={plan.parentId ? parentById.get(plan.parentId) : undefined} canMoveUp={index > 0} canMoveDown={index < plans.length - 1} onToggle={() => void togglePlan(plan)} onEdit={() => openEditor(plan)} onDelete={() => void removePlan(plan)} onMove={(direction) => void reorder(index, direction)} />)}</div>}
     </Card>

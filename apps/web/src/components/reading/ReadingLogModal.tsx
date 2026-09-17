@@ -4,6 +4,7 @@ import { BookOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { Book } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { BookCover } from './BookCover';
+import { fireCelebrationCannon, fireConfetti } from '../ui';
 
 interface ReadingLogModalProps {
   book: Book | null;
@@ -55,7 +56,13 @@ export function ReadingLogModal({ book, open, onClose, onSuccess }: ReadingLogMo
         note: values.note?.trim() || undefined,
         date: values.date,
       });
-      message.success(isFinished ? `🎉 恭喜读完《${book.title}》！` : `已记录翻阅至第 ${values.page} 页`);
+      if (isFinished) {
+        fireCelebrationCannon();
+        message.success(`🎉 恭喜读完《${book.title}》！`);
+      } else {
+        fireConfetti();
+        message.success(`已记录翻阅至第 ${values.page} 页`);
+      }
       onSuccess();
       onClose();
     } catch (error) {
