@@ -19,6 +19,7 @@ import {
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
 import { dataSource } from '../data';
+import { ParticlesBackground } from '../components/ui';
 
 const { Sider, Header, Content } = Layout;
 
@@ -145,8 +146,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <Layout className="app-shell">
+      <ParticlesBackground />
       <Sider width={272} className="sidebar desktop-sidebar" breakpoint="lg" collapsedWidth={0}>
-        <div className="app-logo">
+        <div className="app-logo" data-tauri-drag-region="true">
           <span className="traffic-lights" aria-hidden="true"><i /><i /><i /></span>
           <span className="logo-mark">✦</span>
           <span className="brand-lockup"><strong>lifeOS</strong><small>your life, in flow</small></span>
@@ -156,7 +158,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div className="sidebar-footer"><span className="sidebar-footer-glow" /><span>把日子养成喜欢的样子</span></div>
       </Sider>
       <Layout className="page-layout">
-        <Header className="topbar">
+        <Header className="topbar" data-tauri-drag-region="true">
           <div className="topbar-actions">
             <Button
               className="mobile-menu-trigger"

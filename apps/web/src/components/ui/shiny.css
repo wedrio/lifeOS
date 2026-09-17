@@ -1,0 +1,60 @@
+.shiny-text {
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 35%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0) 65%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  display: inline-block;
+  animation: shine var(--shine-speed, 4s) linear infinite;
+}
+
+[data-theme='light'] .shiny-text {
+  background: linear-gradient(
+    120deg,
+    var(--leaf-deep, #166b43) 0%,
+    var(--leaf-deep, #166b43) 35%,
+    #4ade80 50%,
+    var(--leaf-deep, #166b43) 65%,
+    var(--leaf-deep, #166b43) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-theme='dark'] .shiny-text {
+  background: linear-gradient(
+    120deg,
+    #94a3b8 0%,
+    #94a3b8 35%,
+    #ffffff 50%,
+    #94a3b8 65%,
+    #94a3b8 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes shine {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiny-text {
+    animation: none;
+  }
+}

@@ -22,8 +22,9 @@ import { ClearOutlined, DownloadOutlined, InboxOutlined, SaveOutlined } from '@a
 import type { BackupImportMode, BackupPayload, Settings, SettingsInput } from '@lifeos/shared';
 import { settingsInputSchema } from '@lifeos/shared';
 import { dataSource } from '../data';
-import { useUIStore } from '../stores/uiStore';
+import { useUIStore, type ParticleDensity } from '../stores/uiStore';
 import { webCapabilities } from '../platform/webCapabilities';
+import { SpotlightCard } from '../components/ui';
 import '../styles/settings.css';
 
 type SettingsFormValues = SettingsInput;
@@ -38,6 +39,10 @@ export function SettingsPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [form] = Form.useForm<SettingsFormValues>();
   const setTheme = useUIStore((state) => state.setTheme);
+  const particlesEnabled = useUIStore((state) => state.particlesEnabled);
+  const setParticlesEnabled = useUIStore((state) => state.setParticlesEnabled);
+  const particlesDensity = useUIStore((state) => state.particlesDensity);
+  const setParticlesDensity = useUIStore((state) => state.setParticlesDensity);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -194,7 +199,61 @@ export function SettingsPage() {
         </Col>
 
         <Col xs={24} xl={10}>
-          <Card title="当前数据概览" loading={loading}>
+          <Card title="视觉与动效增强">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <Typography.Text strong>动态粒子背景</Typography.Text>
+                  <br />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    在背景中渲染呼吸浮游的微光粒子与连线
+                  </Typography.Text>
+                </div>
+                <Switch
+                  checked={particlesEnabled}
+                  onChange={(checked) => setParticlesEnabled(checked)}
+                  checkedChildren="开启"
+                  unCheckedChildren="关闭"
+                />
+              </div>
+
+              {particlesEnabled && (
+                <div>
+                  <Typography.Text type="secondary" style={{ fontSize: 13, marginBottom: 6, display: 'block' }}>
+                    粒子密度
+                  </Typography.Text>
+                  <Segmented<ParticleDensity>
+                    block
+                    value={particlesDensity}
+                    onChange={(val) => setParticlesDensity(val)}
+                    options={[
+                      { label: '轻量 (省电)', value: 'low' },
+                      { label: '标准', value: 'normal' },
+                      { label: '丰富 (沉浸)', value: 'high' },
+                    ]}
+                  />
+                </div>
+              )}
+
+              <Divider style={{ margin: '8px 0' }} />
+
+              <div>
+                <Typography.Text strong style={{ fontSize: 13 }}>
+                  ⚡ 全局快捷键
+                </Typography.Text>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8, fontSize: 12 }}>
+                  <div><kbd style={{ background: 'var(--glass-soft)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--line)' }}>T</kbd> 切换明暗主题</div>
+                  <div><kbd style={{ background: 'var(--glass-soft)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--line)' }}>N</kbd> 记一笔账</div>
+                  <div><kbd style={{ background: 'var(--glass-soft)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--line)' }}>H</kbd> 习惯打卡</div>
+                  <div><kbd style={{ background: 'var(--glass-soft)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--line)' }}>M</kbd> 写一条日常</div>
+                  <div><kbd style={{ background: 'var(--glass-soft)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--line)' }}>P</kbd> 行动计划</div>
+                  <div><kbd style={{ background: 'var(--glass-soft)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--line)' }}>B</kbd> 纸质书架</div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="当前数据概览" loading={loading} style={{ marginTop: 16 }}>
             {settings && (
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="当前数据源">MockDataSource · localStorage</Descriptions.Item>
@@ -217,41 +276,47 @@ export function SettingsPage() {
           <Card title="数据备份与恢复">
             <Row gutter={[16, 16]}>
               <Col xs={24} md={8}>
-                <div className="settings-action">
-                  <DownloadOutlined />
-                  <h3>导出完整备份</h3>
-                  <p>导出所有板块数据为可迁移的 JSON 文件。</p>
-                  <Button type="primary" icon={<DownloadOutlined />} onClick={() => void exportData()}>
-                    导出 JSON
-                  </Button>
-                </div>
+                <SpotlightCard className="settings-action-card" spotlightColor="rgba(35, 141, 91, 0.16)">
+                  <div className="settings-action">
+                    <DownloadOutlined />
+                    <h3>导出完整备份</h3>
+                    <p>导出所有板块数据为可迁移的 JSON 文件。</p>
+                    <Button type="primary" icon={<DownloadOutlined />} onClick={() => void exportData()}>
+                      导出 JSON
+                    </Button>
+                  </div>
+                </SpotlightCard>
               </Col>
               <Col xs={24} md={8}>
-                <div className="settings-action">
-                  <InboxOutlined />
-                  <h3>导入备份</h3>
-                  <p>读取 lifeOS JSON 文件后，选择替换或合并。</p>
-                  <Button icon={<InboxOutlined />} onClick={() => inputRef.current?.click()}>
-                    选择 JSON 文件
-                  </Button>
-                  <input
-                    ref={inputRef}
-                    className="visually-hidden"
-                    type="file"
-                    accept="application/json,.json"
-                    onChange={(event) => void readImport(event.target.files?.[0])}
-                  />
-                </div>
+                <SpotlightCard className="settings-action-card" spotlightColor="rgba(56, 189, 248, 0.16)">
+                  <div className="settings-action">
+                    <InboxOutlined />
+                    <h3>导入备份</h3>
+                    <p>读取 lifeOS JSON 文件后，选择替换或合并。</p>
+                    <Button icon={<InboxOutlined />} onClick={() => inputRef.current?.click()}>
+                      选择 JSON 文件
+                    </Button>
+                    <input
+                      ref={inputRef}
+                      className="visually-hidden"
+                      type="file"
+                      accept="application/json,.json"
+                      onChange={(event) => void readImport(event.target.files?.[0])}
+                    />
+                  </div>
+                </SpotlightCard>
               </Col>
               <Col xs={24} md={8}>
-                <div className="settings-action danger">
-                  <ClearOutlined />
-                  <h3>清空 Mock 数据</h3>
-                  <p>保留内置分类与账户，其他数据恢复为空。</p>
-                  <Button danger icon={<ClearOutlined />} onClick={clearData}>
-                    清空数据
-                  </Button>
-                </div>
+                <SpotlightCard className="settings-action-card" spotlightColor="rgba(248, 113, 113, 0.16)">
+                  <div className="settings-action danger">
+                    <ClearOutlined />
+                    <h3>清空 Mock 数据</h3>
+                    <p>保留内置分类与账户，其他数据恢复为空。</p>
+                    <Button danger icon={<ClearOutlined />} onClick={clearData}>
+                      清空数据
+                    </Button>
+                  </div>
+                </SpotlightCard>
               </Col>
             </Row>
           </Card>

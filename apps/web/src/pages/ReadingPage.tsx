@@ -9,7 +9,6 @@ import {
   Radio,
   Row,
   Select,
-  Statistic,
   Typography,
   message,
 } from 'antd';
@@ -29,6 +28,7 @@ import { BookDetailDrawer } from '../components/reading/BookDetailDrawer';
 import { BookEditModal } from '../components/reading/BookEditModal';
 import { ReadingLogModal } from '../components/reading/ReadingLogModal';
 import { BookNoteModal } from '../components/reading/BookNoteModal';
+import { CountUp, SpotlightCard } from '../components/ui';
 import '../styles/reading.css';
 
 export function ReadingPage() {
@@ -146,65 +146,71 @@ export function ReadingPage() {
       <div className="reading-summary">
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} md={6}>
-            <Card className="dashboard-metric-card" bordered={false}>
-              <Statistic
-                title="正在翻阅"
-                value={stats?.currentReadingCount ?? 0}
-                suffix="本"
-                prefix={<BookOutlined style={{ color: '#3b82f6', marginRight: 6 }} />}
-              />
-              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-                放在桌边持续阅读的书籍
-              </div>
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={12} md={6}>
-            <Card className="dashboard-metric-card" bordered={false}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Statistic
-                  title="年度阅读挑战"
-                  value={stats?.finishedThisYear ?? 0}
-                  suffix={`/ ${stats?.annualTarget ?? 12} 本`}
-                  prefix={<TrophyOutlined style={{ color: '#f59e0b', marginRight: 6 }} />}
-                />
-              </div>
-              <div style={{ marginTop: 6 }}>
-                <Progress percent={targetProgress} size="small" strokeColor="#f59e0b" showInfo={false} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                  <span>达成率 {targetProgress}%</span>
-                  <span>{targetProgress >= 100 ? '🎉 已达标！' : `还差 ${(stats?.annualTarget ?? 12) - (stats?.finishedThisYear ?? 0)} 本`}</span>
+            <SpotlightCard className="dashboard-metric-card" spotlightColor="rgba(59, 130, 246, 0.16)">
+              <div style={{ padding: 16 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <BookOutlined style={{ color: '#3b82f6' }} /> 正在翻阅
+                </Typography.Text>
+                <Typography.Title level={2} style={{ margin: '6px 0 2px' }}>
+                  <CountUp to={stats?.currentReadingCount ?? 0} /> <Typography.Text type="secondary" style={{ fontSize: 14 }}>本</Typography.Text>
+                </Typography.Title>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+                  放在桌边持续阅读的书籍
                 </div>
               </div>
-            </Card>
+            </SpotlightCard>
           </Col>
 
           <Col xs={24} sm={12} md={6}>
-            <Card className="dashboard-metric-card" bordered={false}>
-              <Statistic
-                title="累计阅读页数"
-                value={stats?.totalPagesRead ?? 0}
-                suffix="页"
-                prefix={<FireOutlined style={{ color: '#10b981', marginRight: 6 }} />}
-              />
-              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-                一步一个脚印的翻页积累
+            <SpotlightCard className="dashboard-metric-card" spotlightColor="rgba(245, 158, 11, 0.16)">
+              <div style={{ padding: 16 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <TrophyOutlined style={{ color: '#f59e0b' }} /> 年度阅读挑战
+                </Typography.Text>
+                <Typography.Title level={2} style={{ margin: '6px 0 2px' }}>
+                  <CountUp to={stats?.finishedThisYear ?? 0} /> <Typography.Text type="secondary" style={{ fontSize: 14 }}>/ <CountUp to={stats?.annualTarget ?? 12} /> 本</Typography.Text>
+                </Typography.Title>
+                <div style={{ marginTop: 6 }}>
+                  <Progress percent={targetProgress} size="small" strokeColor="#f59e0b" showInfo={false} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                    <span>达成率 {targetProgress}%</span>
+                    <span>{targetProgress >= 100 ? '🎉 已达标！' : `还差 ${(stats?.annualTarget ?? 12) - (stats?.finishedThisYear ?? 0)} 本`}</span>
+                  </div>
+                </div>
               </div>
-            </Card>
+            </SpotlightCard>
           </Col>
 
           <Col xs={24} sm={12} md={6}>
-            <Card className="dashboard-metric-card" bordered={false}>
-              <Statistic
-                title="精彩书摘"
-                value={notes.length}
-                suffix="条"
-                prefix={<ReadOutlined style={{ color: '#8b5cf6', marginRight: 6 }} />}
-              />
-              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-                随书划线与认知沉淀
+            <SpotlightCard className="dashboard-metric-card" spotlightColor="rgba(16, 185, 129, 0.16)">
+              <div style={{ padding: 16 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <FireOutlined style={{ color: '#10b981' }} /> 累计阅读页数
+                </Typography.Text>
+                <Typography.Title level={2} style={{ margin: '6px 0 2px' }}>
+                  <CountUp to={stats?.totalPagesRead ?? 0} /> <Typography.Text type="secondary" style={{ fontSize: 14 }}>页</Typography.Text>
+                </Typography.Title>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+                  一步一个脚印的翻页积累
+                </div>
               </div>
-            </Card>
+            </SpotlightCard>
+          </Col>
+
+          <Col xs={24} sm={12} md={6}>
+            <SpotlightCard className="dashboard-metric-card" spotlightColor="rgba(139, 92, 246, 0.16)">
+              <div style={{ padding: 16 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <ReadOutlined style={{ color: '#8b5cf6' }} /> 精彩书摘
+                </Typography.Text>
+                <Typography.Title level={2} style={{ margin: '6px 0 2px' }}>
+                  <CountUp to={notes.length} /> <Typography.Text type="secondary" style={{ fontSize: 14 }}>条</Typography.Text>
+                </Typography.Title>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
+                  随书划线与认知沉淀
+                </div>
+              </div>
+            </SpotlightCard>
           </Col>
         </Row>
       </div>
