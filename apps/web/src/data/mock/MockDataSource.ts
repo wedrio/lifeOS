@@ -124,8 +124,22 @@ function initialStore(): MockStore {
       weekStartsOn: 1,
       autoRollOverIncompletePlans: true,
       annualReadingTarget: 12,
+      makeupCardBalance: 2,
+      makeupCardMonth: now.slice(0, 7),
     },
   };
+}
+
+const MAKEUP_CARDS_PER_MONTH = 2;
+
+/** 补签卡按月发放（每月 2 张，不累积）；旧数据缺字段时在此兜底 */
+function ensureMakeupCards(store: MockStore): number {
+  const month = monthToday();
+  if (store.settings.makeupCardMonth !== month || typeof store.settings.makeupCardBalance !== 'number') {
+    store.settings.makeupCardMonth = month;
+    store.settings.makeupCardBalance = MAKEUP_CARDS_PER_MONTH;
+  }
+  return store.settings.makeupCardBalance;
 }
 
 /** Brings the empty A0 localStorage shape forward without overwriting user finance data. */
@@ -528,7 +542,7 @@ export class MockDataSource implements DataSource {
       store.habits = store.habits.filter((item) => item.id !== habitId);
       store.habitCheckIns = store.habitCheckIns.filter((item) => item.habitId !== habitId);
     }),
-    checkIn: (habitId: string, date: ISODate, note?: string) => this.mutate((store) => {
+    checkIn: (habitId: string, date: ISODate, note?: string, options?: { useMakeupCard?: boolean }) => this.mutate((store) => {
       const habit = store.habits.find((item) => item.id === habitId);
       if (!habit) throw new Error('未找到该习惯');
       if (habit.archived) throw new Error('已归档习惯不能打卡');
@@ -538,7 +552,15 @@ export class MockDataSource implements DataSource {
       if (!Number.isFinite(targetTime)) throw new Error('日期格式应为 YYYY-MM-DD');
       if (targetTime > todayTime) throw new Error('不能为未来日期打卡');
       const daysAgo = Math.round((todayTime - targetTime) / 86_400_000);
-      if (daysAgo > habit.allowBackfillDays) throw new Error(habit.allowBackfillDays > 0 ? `仅允许补打最近 ${habit.allowBackfillDays} 天` : '该习惯未开启补打卡');
+      if (daysAgo > habit.allowBackfillDays) {
+        // 超出补打窗口：消耗 1 张补签卡（每月发放、不累积、取消不返还）
+        const balance = ensureMakeupCards(store);
+        if (!options?.useMakeupCard) {
+          throw new Error('超出允许补打天数，可使用 1 张补签卡补打');
+        }
+        if (balance <= 0) throw new Error('本月补签卡已用完，下月再来');
+        store.settings.makeupCardBalance = balance - 1;
+      }
       const dailyTarget = habit.frequency === 'daily' ? habit.timesPerPeriod : 1;
       const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
       if (existing) {
@@ -792,7 +814,15 @@ export class MockDataSource implements DataSource {
   };
 
   settings = {
-    get: () => this.query((store) => store.settings),
+    get: () => this.query((store) => {
+      // 展示口径：跨月未使用时按「已重新发放」返回（持久化在下次 mutate 时落盘）
+      const settings = { ...store.settings };
+      if (settings.makeupCardMonth !== monthToday() || typeof settings.makeupCardBalance !== 'number') {
+        settings.makeupCardMonth = monthToday();
+        settings.makeupCardBalance = MAKEUP_CARDS_PER_MONTH;
+      }
+      return settings;
+    }),
     update: (patch: Partial<SettingsInput>) => this.mutate((store) => this.touch(store.settings, patch)),
   };
 

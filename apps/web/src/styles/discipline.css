@@ -85,3 +85,9 @@
 .habit-badge.achieved { opacity: 1; filter: none; background: color-mix(in srgb, var(--habit-color) 14%, transparent); box-shadow: 0 3px 10px color-mix(in srgb, var(--habit-color) 22%, transparent); }
 .habit-badge .badge-icon { font-size: 22px; line-height: 1; }
 .habit-badge .badge-label { font-size: 11px; color: var(--muted); }
+
+/* ===== emoji 选择器 ===== */
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 32px); gap: 4px; }
+.emoji-cell { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid transparent; border-radius: 8px; background: transparent; cursor: pointer; transition: background .15s ease; }
+.emoji-cell:hover { background: rgba(118,119,145,.14); }
+.emoji-cell.active { border-color: var(--habit-color, #2f9c67); background: color-mix(in srgb, var(--habit-color, #2f9c67) 12%, transparent); }

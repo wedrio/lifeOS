@@ -210,6 +210,10 @@ export interface Settings extends BaseEntity {
   /** When enabled, unfinished daily plans are moved forward on opening today's plan. */
   autoRollOverIncompletePlans: boolean;
   annualReadingTarget: number;
+  /** 补签卡余额：每月 1 日发放 2 张，当月未用完不累积 */
+  makeupCardBalance: number;
+  /** 已发放月份 'YYYY-MM'，用于判断是否需要重新发放 */
+  makeupCardMonth: string;
 }
 export type SettingsInput = Pick<Settings, 'currency' | 'theme' | 'weekStartsOn' | 'autoRollOverIncompletePlans' | 'annualReadingTarget'>;
 

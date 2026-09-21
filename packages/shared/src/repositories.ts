@@ -11,7 +11,7 @@ export interface HabitRepository {
   create(input: HabitInput): Promise<Habit>;
   update(id: string, patch: Partial<HabitInput>): Promise<Habit>;
   remove(id: string): Promise<void>;
-  checkIn(habitId: string, date: ISODate, note?: string): Promise<HabitCheckIn>;
+  checkIn(habitId: string, date: ISODate, note?: string, options?: { useMakeupCard?: boolean }): Promise<HabitCheckIn>;
   uncheck(habitId: string, date: ISODate): Promise<void>;
   /** 标记某天为休息日（skip）：不清 streak、不计未完成 */
   skipDay(habitId: string, date: ISODate): Promise<HabitCheckIn>;

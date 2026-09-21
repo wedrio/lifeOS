@@ -25,6 +25,7 @@ export function HabitsPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Habit | undefined>();
   const [noteTarget, setNoteTarget] = useState<Habit | undefined>();
+  const [makeupCards, setMakeupCards] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -42,6 +43,8 @@ export function HabitsPage() {
       setHabits(nextHabits);
       setCheckIns(Object.fromEntries(byHabit));
       setSelectedId((current) => nextHabits.some((habit) => habit.id === current) ? current : nextHabits.find((habit) => !habit.archived)?.id ?? nextHabits[0]?.id);
+      const settings = await dataSource.settings.get();
+      setMakeupCards(settings.makeupCardBalance ?? 0);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '习惯加载失败');
     } finally { setLoading(false); }
@@ -82,7 +85,28 @@ export function HabitsPage() {
         }
       }
       await reload();
-    } catch (error) { message.error(error instanceof Error ? error.message : '打卡失败'); }
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : '打卡失败';
+      if (raw.includes('补签卡')) {
+        Modal.confirm({
+          title: '使用补签卡补打？',
+          content: `该日期超出补打范围。本月剩余 ${makeupCards} 张补签卡，使用 1 张补打 ${date}？`,
+          okText: '使用 1 张补签卡',
+          okButtonProps: { disabled: makeupCards <= 0 },
+          cancelText: '取消',
+          onOk: async () => {
+            try {
+              await dataSource.habits.checkIn(habit.id, date, undefined, { useMakeupCard: true });
+              fireConfetti();
+              message.success('补签成功，连续续上了！');
+              await reload();
+            } catch (retryError) { message.error(retryError instanceof Error ? retryError.message : '补签失败'); }
+          },
+        });
+      } else {
+        message.error(raw);
+      }
+    }
   };
   const toggleSkip = async (habit: Habit, date: ISODate) => {
     const record = (checkIns[habit.id] ?? []).find((item) => item.date === date);
@@ -138,6 +162,7 @@ export function HabitsPage() {
               <CountUp to={checkedToday} /> <Typography.Text type="secondary">/ <CountUp to={dueToday.length} /></Typography.Text>
             </Typography.Title>
             <Progress percent={dueToday.length ? Math.round(checkedToday / dueToday.length * 100) : 0} showInfo={false} strokeColor="#2f9c67" />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>🎁 补签卡 本月剩余 {makeupCards} 张 · 超出补打范围时使用</Typography.Text>
           </div>
         </SpotlightCard>
       </Col>

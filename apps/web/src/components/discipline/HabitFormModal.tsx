@@ -1,9 +1,41 @@
-import { useEffect } from 'react';
-import { Button, Checkbox, Form, Input, InputNumber, Modal, Segmented, Switch, message } from 'antd';
+import { useEffect, useState } from 'react';
+import { Button, Checkbox, Form, Input, InputNumber, Modal, Popover, Segmented, Switch, message } from 'antd';
+import { SmileOutlined } from '@ant-design/icons';
 import type { Habit, HabitInput } from '@lifeos/shared';
 import { habitInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { WEEKDAY_OPTIONS } from '../../lib/dates';
+
+const EMOJI_CHOICES = [
+  '✨', '📚', '🏃', '💧', '🧘', '💪', '🦷', '🛏️',
+  '🌅', '🧹', '🎸', '✍️', '🧠', '💰', '🥗', '🍎',
+  '🚶', '🏊', '🚴', '☀️', '🌙', '📖', '📝', '🎯',
+  '🌱', '🧩', '🎨', '📷', '🐕', '🌐', '⏰', '📵',
+  '🧑‍💻', '🛠️', '💊', '🪥', '🚭', '🎧', '🙏', '❤️',
+];
+
+/** 习惯图标输入：支持手动输入 + 常用 emoji 网格选择（docs/01 §2.1.1 v2.4） */
+function IconInput({ value, onChange }: { value?: string; onChange?: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return <Input
+    value={value}
+    onChange={(event) => onChange?.(event.target.value)}
+    maxLength={8}
+    suffix={<Popover
+      open={open}
+      onOpenChange={setOpen}
+      trigger="click"
+      placement="bottomRight"
+      content={<div className="emoji-grid">
+        {EMOJI_CHOICES.map((emoji) => (
+          <button key={emoji} type="button" className={`emoji-cell ${emoji === value ? 'active' : ''}`} onClick={() => { onChange?.(emoji); setOpen(false); }}>{emoji}</button>
+        ))}
+      </div>}
+    >
+      <Button size="small" type="text" icon={<SmileOutlined />} aria-label="选择 emoji 图标" />
+    </Popover>}
+  />;
+}
 
 interface HabitFormValues {
   name: string;
@@ -57,7 +89,7 @@ export function HabitFormModal({ habit, open, onClose, onSaved }: { habit?: Habi
   return <Modal open={open} title={habit ? '编辑习惯' : '新建习惯'} onCancel={onClose} footer={null} destroyOnClose>
     <Form form={form} layout="vertical" onFinish={save} initialValues={{ icon: '✨', color: '#2f9c67', frequency: 'daily', timesPerPeriod: 1, weekdays: [1, 3, 5], allowBackfillDays: 0, archived: false }}>
       <Form.Item name="name" label="习惯名称" rules={[{ required: true, message: '请输入习惯名称' }]}><Input placeholder="例如：阅读 30 分钟" maxLength={80} autoFocus /></Form.Item>
-      <div className="form-two-columns"><Form.Item name="icon" label="图标" rules={[{ required: true }]}><Input maxLength={8} /></Form.Item><Form.Item name="color" label="主题色" rules={[{ required: true }]}><Input type="color" style={{ height: 32 }} /></Form.Item></div>
+      <div className="form-two-columns"><Form.Item name="icon" label="图标" rules={[{ required: true }]}><IconInput /></Form.Item><Form.Item name="color" label="主题色" rules={[{ required: true }]}><Input type="color" style={{ height: 32 }} /></Form.Item></div>
       <Form.Item name="frequency" label="目标频率" rules={[{ required: true }]}><Segmented block options={[{ label: '每天', value: 'daily' }, { label: '每周 N 次', value: 'weekly' }, { label: '指定星期几', value: 'custom' }]} /></Form.Item>
       {frequency === 'daily' && <Form.Item name="timesPerPeriod" label="每日目标次数" extra="一天内可多次打卡，逐次累加" rules={[{ required: true, message: '请填写目标次数' }]}><InputNumber min={1} max={12} precision={0} style={{ width: '100%' }} /></Form.Item>}
       {frequency === 'weekly' && <Form.Item name="timesPerPeriod" label="每周目标次数" extra="一周内任意完成 N 次即达标，不限定星期几，休息不断签" rules={[{ required: true, message: '请填写目标次数' }]}><InputNumber min={1} max={7} precision={0} style={{ width: '100%' }} /></Form.Item>}
