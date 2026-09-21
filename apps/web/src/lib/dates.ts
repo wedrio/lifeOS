@@ -79,6 +79,15 @@ export const isPlanOverdue = (plan: Pick<Plan, 'level' | 'period'>, reference = 
   return plan.period < reference;
 };
 
+/** 相对今天的日期标签：今天/明天/后天/N 天后（未来 7 天视图组标题用） */
+export const relativeDayLabel = (date: ISODate, reference = today()): string => {
+  const diff = daysBetween(reference, date);
+  if (diff === 0) return '今天';
+  if (diff === 1) return '明天';
+  if (diff === 2) return '后天';
+  return `${diff} 天后`;
+};
+
 export interface HabitStats {
   currentStreak: number;
   longestStreak: number;
