@@ -30,7 +30,8 @@ export const isoWeekPeriod = (value: ISODate): string => {
   return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 };
 
-const dateFromISOWeek = (period: string): ISODate => {
+/** 周周期（YYYY-Www）→ 该周周一日期（周复盘视图换算周窗口用） */
+export const weekPeriodStart = (period: string): ISODate => {
   const match = /^(\d{4})-W(\d{2})$/.exec(period);
   if (!match) return today();
   const year = Number(match[1]);
@@ -58,7 +59,7 @@ export const shiftPlanPeriod = (level: PlanLevel, period: string, amount: number
     const date = new Date(Date.UTC(year, month - 1 + amount, 1));
     return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
   }
-  if (level === 'week') return isoWeekPeriod(addDays(dateFromISOWeek(period), amount * 7));
+  if (level === 'week') return isoWeekPeriod(addDays(weekPeriodStart(period), amount * 7));
   return addDays(period, amount);
 };
 

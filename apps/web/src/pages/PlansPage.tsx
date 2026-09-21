@@ -3,14 +3,14 @@ import { Button, Card, Checkbox, Empty, Modal, Popconfirm, Progress, Segmented, 
 import { CaretDownOutlined, CaretRightOutlined, DeleteOutlined, DownOutlined, EditOutlined, ForwardOutlined, LeftOutlined, PlusOutlined, RightOutlined, UpOutlined } from '@ant-design/icons';
 import type { Plan, PlanLevel, PlanStatus } from '@lifeos/shared';
 import { dataSource, generateDisciplineDemoData } from '../data';
-import { addDays, defaultPeriod, isPlanOverdue, periodInputType, periodLabel, relativeDayLabel, shiftPlanPeriod, today } from '../lib/dates';
+import { addDays, defaultPeriod, isPlanOverdue, periodInputType, periodLabel, relativeDayLabel, shiftPlanPeriod, today, weekPeriodStart } from '../lib/dates';
 import { PlanFormModal } from '../components/discipline/PlanFormModal';
 import { fireCelebrationCannon, fireConfetti, SpotlightCard } from '../components/ui';
 import '../styles/discipline.css';
 
 const levelOptions: Array<{ label: string; value: PlanLevel }> = [{ label: '年计划', value: 'year' }, { label: '月计划', value: 'month' }, { label: '周计划', value: 'week' }, { label: '日计划', value: 'day' }];
 const levelLabel: Record<PlanLevel, string> = { year: '年计划', month: '月计划', week: '周计划', day: '日计划' };
-type PlanViewMode = PlanLevel | 'overdue' | 'upcoming';
+type PlanViewMode = PlanLevel | 'overdue' | 'upcoming' | 'review';
 const priorityMeta = { low: { label: '低优先级', color: 'default' }, medium: { label: '中优先级', color: 'blue' }, high: { label: '高优先级', color: 'red' } } as const;
 const statusMeta: Record<PlanStatus, { label: string; color: string }> = { not_started: { label: '待开始', color: 'default' }, in_progress: { label: '进行中', color: 'processing' }, completed: { label: '已完成', color: 'success' }, cancelled: { label: '已取消', color: 'default' } };
 
@@ -36,7 +36,7 @@ export function PlansPage() {
       const settings = await dataSource.settings.get();
       setAutoRollOver(settings.autoRollOverIncompletePlans);
       const all = await dataSource.plans.list({ includeCompleted: true });
-      const visible = viewMode === 'overdue' || viewMode === 'upcoming' ? all : await dataSource.plans.list({ level: viewMode, period, includeCompleted: true });
+      const visible = viewMode === 'overdue' || viewMode === 'upcoming' || viewMode === 'review' ? all : await dataSource.plans.list({ level: viewMode, period, includeCompleted: true });
       setPlans(visible);
       setAllPlans(all);
     } catch (error) { message.error(error instanceof Error ? error.message : '计划加载失败'); }
@@ -104,9 +104,38 @@ export function PlansPage() {
       .map((date) => ({ date, items: window.filter((plan) => plan.period === date).sort((a, b) => a.order - b.order) }));
   }, [allPlans]);
   const upcomingTotal = upcomingGroups.reduce((sum, group) => sum + group.items.length, 0);
+  /** 周复盘统计：以周为单位（period 为周周期），日计划按周窗口、周/月/年计划按周期匹配 */
+  const review = useMemo(() => {
+    const start = weekPeriodStart(period);
+    const end = addDays(start, 6);
+    const inRange = (plan: Plan) => {
+      if (plan.status === 'cancelled') return false;
+      if (plan.level === 'day') return plan.period >= start && plan.period <= end;
+      if (plan.level === 'week') return plan.period === period;
+      if (plan.level === 'month') return plan.period === start.slice(0, 7); // 周期含 W 后缀，月份取周一所在月
+      return plan.period === period.slice(0, 4);
+    };
+    const rateOf = (plans: Plan[]) => {
+      const done = plans.filter((plan) => plan.status === 'completed').length;
+      return { done, total: plans.length, rate: plans.length ? Math.round(done / plans.length * 100) : 0 };
+    };
+    const levelStat = (level: PlanLevel) => rateOf(allPlans.filter((plan) => plan.level === level && inRange(plan)));
+    const execPlans = allPlans.filter((plan) => (plan.level === 'day' || plan.level === 'week') && inRange(plan));
+    const dayStats = (week: string) => rateOf(allPlans.filter((plan) => {
+      if (plan.level !== 'day' || plan.status === 'cancelled') return false;
+      const s = weekPeriodStart(week);
+      return plan.period >= s && plan.period <= addDays(s, 6);
+    }));
+    return {
+      levels: (['year', 'month', 'week', 'day'] as PlanLevel[]).map((level) => ({ level, ...levelStat(level) })),
+      priorityStats: (['high', 'medium', 'low'] as const).map((priority) => ({ priority, ...rateOf(execPlans.filter((plan) => plan.priority === priority)) })),
+      dayTrend: dayStats(period).rate - dayStats(shiftPlanPeriod('week', period, -1)).rate,
+    };
+  }, [allPlans, period]);
   const changeViewMode = (next: PlanViewMode) => {
     setViewMode(next);
     if (next === 'upcoming') setPeriod(today());
+    else if (next === 'review') setPeriod(defaultPeriod('week'));
     else if (next !== 'overdue') setPeriod(defaultPeriod(next));
   };
   const openEditor = (plan?: Plan, presetPeriod?: string) => { setEditing(plan); setEditorPresetPeriod(presetPeriod); setEditorOpen(true); };
@@ -182,8 +211,8 @@ export function PlansPage() {
     <SpotlightCard className="plan-summary-card" spotlightColor="rgba(35, 141, 91, 0.16)" style={{ marginBottom: 16 }}>
       <div style={{ padding: 20 }}>
         <div className="finance-toolbar">
-          <Segmented<PlanViewMode> value={viewMode} onChange={changeViewMode} options={[...levelOptions, { label: overduePlans.length > 0 ? `逾期 · ${overduePlans.length}` : '逾期', value: 'overdue' as PlanViewMode }, { label: '未来 7 天', value: 'upcoming' as PlanViewMode }]} />
-          {viewMode !== 'overdue' && viewMode !== 'upcoming' && <Space size={14}>
+          <Segmented<PlanViewMode> value={viewMode} onChange={changeViewMode} options={[...levelOptions, { label: overduePlans.length > 0 ? `逾期 · ${overduePlans.length}` : '逾期', value: 'overdue' as PlanViewMode }, { label: '未来 7 天', value: 'upcoming' as PlanViewMode }, { label: '复盘', value: 'review' as PlanViewMode }]} />
+          {(viewMode === 'year' || viewMode === 'month' || viewMode === 'week' || viewMode === 'day') && <Space size={14}>
             <span style={{ color: '#77798a', fontSize: 13 }}>自动结转未完成日计划</span>
             <Switch size="small" checked={autoRollOver} onChange={(enabled) => void setRollOver(enabled)} />
             <div className="plan-period-control">
@@ -195,15 +224,26 @@ export function PlansPage() {
             </div>
           </Space>}
         </div>
-        {viewMode !== 'overdue' && viewMode !== 'upcoming' && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+        {(viewMode === 'year' || viewMode === 'month' || viewMode === 'week' || viewMode === 'day') && <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
           <Typography.Text type="secondary">{periodLabel(viewMode, period)} 完成度</Typography.Text>
           <Progress percent={completion} showInfo={false} strokeColor="#2f9c67" style={{ maxWidth: 320 }} />
         </div>}
         {(viewMode === 'overdue' || viewMode === 'upcoming') && <div style={{ marginTop: 8 }}><Typography.Text type="secondary">{viewMode === 'overdue' ? `共 ${overduePlans.length} 项逾期未完成，按周期从旧到新排列` : `未来 7 天（含今天）共 ${upcomingTotal} 项日计划`}</Typography.Text></div>}
+        {viewMode === 'review' && <div style={{ marginTop: 8 }}>
+          <Space size={14}>
+            <Typography.Text type="secondary">回顾周期</Typography.Text>
+            <div className="plan-period-control">
+              <Button type="text" icon={<LeftOutlined />} aria-label="上一周期" onClick={() => setPeriod((current) => shiftPlanPeriod('week', current, -1))} />
+              <input className="ant-input" type="week" value={period} onChange={(event) => setPeriod(event.target.value || defaultPeriod('week'))} aria-label="复盘周期" />
+              <Button type="text" icon={<RightOutlined />} aria-label="下一周期" onClick={() => setPeriod((current) => shiftPlanPeriod('week', current, 1))} />
+            </div>
+          </Space>
+          <Typography.Text type="secondary" style={{ marginLeft: 12 }}>统计该周相关的年/月/周/日计划（已取消不参与）</Typography.Text>
+        </div>}
       </div>
     </SpotlightCard>
 
-    <Card title={viewMode === 'overdue' ? '逾期的计划' : viewMode === 'upcoming' ? '未来 7 天的计划' : viewMode === 'day' && period === today() ? '今天的计划' : `${periodLabel(viewMode, period)} 的计划`} extra={<Typography.Text type="secondary">{viewMode === 'overdue' ? overduePlans.length : viewMode === 'upcoming' ? upcomingTotal : plans.length} 项</Typography.Text>}>
+    <Card title={viewMode === 'overdue' ? '逾期的计划' : viewMode === 'upcoming' ? '未来 7 天的计划' : viewMode === 'review' ? '计划复盘' : viewMode === 'day' && period === today() ? '今天的计划' : `${periodLabel(viewMode, period)} 的计划`} extra={<Typography.Text type="secondary">{viewMode === 'overdue' ? overduePlans.length : viewMode === 'upcoming' ? upcomingTotal : viewMode === 'review' ? periodLabel('week', period) : plans.length} 项</Typography.Text>}>
       {loading ? <Skeleton active paragraph={{ rows: 8 }} /> : viewMode === 'overdue'
         ? overdueGroups.length === 0
           ? <Empty description="没有逾期的计划，保持这个节奏"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty>
@@ -212,9 +252,35 @@ export function PlansPage() {
           ? upcomingTotal === 0
             ? <Empty description="未来 7 天还没有计划"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty>
             : <div className="plan-list">{upcomingGroups.map((group) => <Fragment key={group.date}><div className="plan-overdue-group-title"><Tag color={group.date === today() ? 'green' : 'blue'}>{periodLabel('day', group.date)} · {relativeDayLabel(group.date)}</Tag><Typography.Text type="secondary">{group.items.length} 项</Typography.Text><Button type="text" size="small" icon={<PlusOutlined />} aria-label={`创建 ${group.date} 的计划`} onClick={() => openEditor(undefined, group.date)} /></div>{group.items.map((plan) => <PlanItem key={plan.id} node={{ plan, children: [] }} index={0} siblings={[]} depth={0} parent={plan.parentId ? parentById.get(plan.parentId) : undefined} descendantCount={descendantCountById.get(plan.id) ?? 0} collapsedIds={collapsedIds} onToggleCollapse={toggleCollapse} onToggle={(item) => void togglePlan(item)} onEdit={openEditor} onDelete={(item) => void removePlan(item)} onMove={() => undefined} />)}</Fragment>)}</div>
+        : viewMode === 'review'
+          ? <div className="plan-list">
+              <div className="habit-stats plan-review-stats">
+                {review.levels.map(({ level, done, total, rate }) => (
+                  <div key={level} className="habit-stat">
+                    <span>{levelLabel[level]}完成率</span>
+                    <strong>{rate}%</strong>
+                    <small>{done}/{total} 项{level === 'day' && total > 0 && review.dayTrend !== 0 ? ` · 较上周 ${review.dayTrend > 0 ? '+' : ''}${review.dayTrend}pp` : ''}</small>
+                  </div>
+                ))}
+              </div>
+              <div className="plan-review-card">
+                <Typography.Text type="secondary">执行层优先级分布（本周日计划 + 周计划）</Typography.Text>
+                {review.priorityStats.map(({ priority, done, total, rate }) => (
+                  <div key={priority} className="plan-review-priority">
+                    <Tag color={priorityMeta[priority].color}>{priorityMeta[priority].label}</Tag>
+                    <Progress percent={rate} size="small" showInfo={false} strokeColor="#2f9c67" style={{ flex: 1 }} />
+                    <Typography.Text type="secondary">{done}/{total}</Typography.Text>
+                  </div>
+                ))}
+              </div>
+              <div className="plan-overdue-group-title">
+                <Tag color={overduePlans.length > 0 ? 'red' : 'green'}>当前逾期 {overduePlans.length} 项</Tag>
+                {overduePlans.length > 0 && <Button size="small" onClick={() => changeViewMode('overdue')}>去处理</Button>}
+              </div>
+            </div>
           : plans.length === 0 ? <Empty description="这个周期还没有计划"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty> : <div className="plan-list">{treeGroups.map(([parentKey, nodes]) => <Fragment key={parentKey || 'root'}>{nodes.map((node, index) => <PlanItem key={node.plan.id} node={node} index={index} siblings={nodes} depth={0} parent={parentKey ? parentById.get(parentKey) : undefined} descendantCount={descendantCountById.get(node.plan.id) ?? 0} collapsedIds={collapsedIds} onToggleCollapse={toggleCollapse} onToggle={(plan) => void togglePlan(plan)} onEdit={openEditor} onDelete={(plan) => void removePlan(plan)} onMove={(planId, siblingIds, direction) => void movePlan(planId, siblingIds, direction)} />)}</Fragment>)}</div>}
     </Card>
-    <PlanFormModal open={editorOpen} plan={editing} plans={allPlans} defaultLevel={viewMode === 'overdue' || viewMode === 'upcoming' ? 'day' : viewMode} defaultPlanPeriod={editorPresetPeriod ?? period} onClose={() => { setEditorOpen(false); setEditing(undefined); setEditorPresetPeriod(undefined); }} onSaved={reload} />
+    <PlanFormModal open={editorOpen} plan={editing} plans={allPlans} defaultLevel={viewMode === 'overdue' || viewMode === 'upcoming' || viewMode === 'review' ? 'day' : viewMode} defaultPlanPeriod={editorPresetPeriod ?? period} onClose={() => { setEditorOpen(false); setEditing(undefined); setEditorPresetPeriod(undefined); }} onSaved={reload} />
   </>;
 }
 

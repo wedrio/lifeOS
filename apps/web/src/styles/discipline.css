@@ -54,6 +54,10 @@
 .plan-tree-children::before { content: ''; position: absolute; left: 7px; top: 4px; bottom: 14px; width: 2px; border-radius: 2px; background: rgba(47, 156, 103, .3); }
 [data-theme='dark'] .plan-tree-children::before { background: rgba(47, 156, 103, .45); }
 .plan-overdue-group-title { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.plan-review-stats { margin: 4px 0 2px; }
+.plan-review-card { display: grid; gap: 10px; padding: 15px; border: 1px solid rgba(255,255,255,.68); border-radius: 15px; background: rgba(255,255,255,.31); }
+[data-theme='dark'] .plan-review-card { background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.08); }
+.plan-review-priority { display: flex; align-items: center; gap: 10px; }
 .form-two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 [data-theme='dark'] .habit-card { border-color: rgba(255,255,255,.08) !important; }
