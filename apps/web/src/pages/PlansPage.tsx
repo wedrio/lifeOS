@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Checkbox, Empty, Popconfirm, Progress, Segmented, Skeleton, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
-import { DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, PlusOutlined, RightOutlined, UpOutlined } from '@ant-design/icons';
+import { CaretDownOutlined, CaretRightOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, PlusOutlined, RightOutlined, UpOutlined } from '@ant-design/icons';
 import type { Plan, PlanLevel, PlanStatus } from '@lifeos/shared';
 import { dataSource, generateDisciplineDemoData } from '../data';
 import { addDays, defaultPeriod, periodInputType, periodLabel, shiftPlanPeriod, today } from '../lib/dates';
@@ -12,6 +12,8 @@ const levelOptions: Array<{ label: string; value: PlanLevel }> = [{ label: '年�
 const priorityMeta = { low: { label: '低优先级', color: 'default' }, medium: { label: '中优先级', color: 'blue' }, high: { label: '高优先级', color: 'red' } } as const;
 const statusMeta: Record<PlanStatus, { label: string; color: string }> = { not_started: { label: '待开始', color: 'default' }, in_progress: { label: '进行中', color: 'processing' }, completed: { label: '已完成', color: 'success' }, cancelled: { label: '已取消', color: 'default' } };
 
+interface PlanNode { plan: Plan; children: PlanNode[] }
+
 export function PlansPage() {
   const [level, setLevel] = useState<PlanLevel>('day');
   const [period, setPeriod] = useState(defaultPeriod('day'));
@@ -21,6 +23,7 @@ export function PlansPage() {
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Plan | undefined>();
+  const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(new Set());
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -43,11 +46,23 @@ export function PlansPage() {
   useEffect(() => { void reload(); }, [reload]);
 
   const parentById = useMemo(() => new Map(allPlans.map((plan) => [plan.id, plan])), [allPlans]);
-  const childCountById = useMemo(() => {
-    const map = new Map<string, number>();
-    allPlans.forEach((plan) => { if (plan.parentId) map.set(plan.parentId, (map.get(plan.parentId) ?? 0) + 1); });
-    return map;
-  }, [allPlans]);
+  /** 树形视图：当前周期计划为根（按 parentId 分组，同组内才是排序兄弟），后代从全量 plans 挂载（可跨层级/周期） */
+  const treeGroups = useMemo(() => {
+    const childrenMap = new Map<string, Plan[]>();
+    allPlans.forEach((plan) => { if (plan.parentId) { const arr = childrenMap.get(plan.parentId) ?? []; arr.push(plan); childrenMap.set(plan.parentId, arr); } });
+    const build = (plan: Plan, depth: number): PlanNode => ({
+      plan,
+      children: depth >= 5 ? [] : (childrenMap.get(plan.id) ?? []).sort((a, b) => a.order - b.order).map((child) => build(child, depth + 1)),
+    });
+    const groups = new Map<string, PlanNode[]>();
+    plans.forEach((plan) => {
+      const key = plan.parentId ?? '';
+      const arr = groups.get(key) ?? [];
+      arr.push(build(plan, 0));
+      groups.set(key, arr);
+    });
+    return [...groups.entries()];
+  }, [plans, allPlans]);
   const completion = plans.length ? Math.round(plans.filter((plan) => plan.status === 'completed').length / plans.length * 100) : 0;
   const changeLevel = (next: PlanLevel) => { setLevel(next); setPeriod(defaultPeriod(next)); };
   const openEditor = (plan?: Plan) => { setEditing(plan); setEditorOpen(true); };
@@ -68,13 +83,26 @@ export function PlansPage() {
     try { await dataSource.plans.remove(plan.id); message.success('计划已删除'); await reload(); }
     catch (error) { message.error(error instanceof Error ? error.message : '删除失败'); }
   };
-  const reorder = async (index: number, direction: -1 | 1) => {
+  const toggleCollapse = (planId: string) => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(planId)) next.delete(planId); else next.add(planId);
+      return next;
+    });
+  };
+  /** 上移/下移：仅在同级兄弟之间交换 order */
+  const movePlan = async (planId: string, siblingIds: string[], direction: -1 | 1) => {
+    const index = siblingIds.indexOf(planId);
     const target = index + direction;
-    if (target < 0 || target >= plans.length) return;
-    const reordered = [...plans];
-    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
-    try { await dataSource.plans.reorder(reordered.map((item) => item.id)); setPlans(reordered); }
-    catch (error) { message.error(error instanceof Error ? error.message : '排序失败'); }
+    if (index < 0 || target < 0 || target >= siblingIds.length) return;
+    const a = allPlans.find((item) => item.id === siblingIds[index]);
+    const b = allPlans.find((item) => item.id === siblingIds[target]);
+    if (!a || !b) return;
+    try {
+      await dataSource.plans.update(a.id, { order: b.order });
+      await dataSource.plans.update(b.id, { order: a.order === b.order ? b.order + (direction === 1 ? 1 : -1) : a.order });
+      await reload();
+    } catch (error) { message.error(error instanceof Error ? error.message : '排序失败'); }
   };
   const setRollOver = async (enabled: boolean) => {
     try {
@@ -122,14 +150,37 @@ export function PlansPage() {
     </SpotlightCard>
 
     <Card title={level === 'day' && period === today() ? '今天的计划' : `${periodLabel(level, period)} 的计划`} extra={<Typography.Text type="secondary">{plans.length} 项</Typography.Text>}>
-      {loading ? <Skeleton active paragraph={{ rows: 8 }} /> : plans.length === 0 ? <Empty description="这个周期还没有计划"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty> : <div className="plan-list">{plans.map((plan, index) => <PlanItem key={plan.id} plan={plan} parent={plan.parentId ? parentById.get(plan.parentId) : undefined} childCount={childCountById.get(plan.id) ?? 0} canMoveUp={index > 0} canMoveDown={index < plans.length - 1} onToggle={() => void togglePlan(plan)} onEdit={() => openEditor(plan)} onDelete={() => void removePlan(plan)} onMove={(direction) => void reorder(index, direction)} />)}</div>}
+      {loading ? <Skeleton active paragraph={{ rows: 8 }} /> : plans.length === 0 ? <Empty description="这个周期还没有计划"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty> : <div className="plan-list">{treeGroups.map(([parentKey, nodes]) => <Fragment key={parentKey || 'root'}>{nodes.map((node, index) => <PlanItem key={node.plan.id} node={node} index={index} siblings={nodes} depth={0} parent={parentKey ? parentById.get(parentKey) : undefined} collapsedIds={collapsedIds} onToggleCollapse={toggleCollapse} onToggle={(plan) => void togglePlan(plan)} onEdit={openEditor} onDelete={(plan) => void removePlan(plan)} onMove={(planId, siblingIds, direction) => void movePlan(planId, siblingIds, direction)} />)}</Fragment>)}</div>}
     </Card>
     <PlanFormModal open={editorOpen} plan={editing} plans={allPlans} defaultLevel={level} defaultPlanPeriod={period} onClose={() => { setEditorOpen(false); setEditing(undefined); }} onSaved={reload} />
   </>;
 }
 
-function PlanItem({ plan, parent, childCount, canMoveUp, canMoveDown, onToggle, onEdit, onDelete, onMove }: { plan: Plan; parent?: Plan; childCount: number; canMoveUp: boolean; canMoveDown: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void; onMove: (direction: -1 | 1) => void }) {
+function PlanItem({ node, index, siblings, depth, parent, collapsedIds, onToggleCollapse, onToggle, onEdit, onDelete, onMove }: {
+  node: PlanNode;
+  index: number;
+  siblings: PlanNode[];
+  depth: number;
+  parent?: Plan;
+  collapsedIds: ReadonlySet<string>;
+  onToggleCollapse: (planId: string) => void;
+  onToggle: (plan: Plan) => void;
+  onEdit: (plan: Plan) => void;
+  onDelete: (plan: Plan) => void;
+  onMove: (planId: string, siblingIds: string[], direction: -1 | 1) => void;
+}) {
+  const plan = node.plan;
   const priority = priorityMeta[plan.priority];
   const status = statusMeta[plan.status];
-  return <div className={`plan-item ${plan.status === 'completed' ? 'is-completed' : ''}`}><Tooltip title={childCount > 0 ? `勾选将级联完成全部 ${childCount} 个子计划` : undefined}><Checkbox checked={plan.status === 'completed'} onChange={onToggle} aria-label={`完成 ${plan.title}`} /></Tooltip><div className="plan-item-main"><div className="plan-item-title-row"><span className="plan-item-title">{plan.title}</span><Tag color={status.color}>{status.label}</Tag><Tag color={priority.color}>{priority.label}</Tag>{childCount > 0 && <Tooltip title={`进度由 ${childCount} 个子计划自动汇总`}><Tag color="green">自动汇总</Tag></Tooltip>}</div><div className="plan-item-description">{plan.description}</div><div className="plan-item-meta">{parent && <span>↳ 关联：{parent.title}</span>}<span>进度 {plan.progress}%</span></div><div className="plan-item-progress"><Progress percent={plan.progress} size="small" showInfo={false} status={plan.status === 'cancelled' ? 'exception' : 'normal'} /></div></div><div className="plan-item-actions"><Tooltip title="上移"><Button type="text" size="small" disabled={!canMoveUp} icon={<UpOutlined />} onClick={() => onMove(-1)} /></Tooltip><Tooltip title="下移"><Button type="text" size="small" disabled={!canMoveDown} icon={<DownOutlined />} onClick={() => onMove(1)} /></Tooltip><Button type="text" size="small" icon={<EditOutlined />} onClick={onEdit} aria-label="编辑计划" /><Popconfirm title="删除这个计划？" description="其直接下级计划也会被删除。" onConfirm={onDelete} okText="删除" cancelText="取消"><Button type="text" danger size="small" icon={<DeleteOutlined />} aria-label="删除计划" /></Popconfirm></div></div>;
+  const childCount = node.children.length;
+  const collapsed = collapsedIds.has(plan.id);
+  return <>
+    <div className={`plan-item ${plan.status === 'completed' ? 'is-completed' : ''}`}>
+      {childCount > 0 && <Button type="text" size="small" className="plan-tree-toggle" icon={collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />} onClick={() => onToggleCollapse(plan.id)} aria-label={collapsed ? '展开子计划' : '折叠子计划'} />}
+      <Tooltip title={childCount > 0 ? `勾选将级联完成全部 ${childCount} 个子计划` : undefined}><Checkbox checked={plan.status === 'completed'} onChange={() => onToggle(plan)} aria-label={`完成 ${plan.title}`} /></Tooltip>
+      <div className="plan-item-main"><div className="plan-item-title-row"><span className="plan-item-title">{plan.title}</span><Tag color={status.color}>{status.label}</Tag><Tag color={priority.color}>{priority.label}</Tag>{childCount > 0 && <Tooltip title={`进度由 ${childCount} 个子计划自动汇总`}><Tag color="green">自动汇总</Tag></Tooltip>}</div><div className="plan-item-description">{plan.description}</div><div className="plan-item-meta">{parent && <span>↳ 关联：{parent.title}</span>}<span>进度 {plan.progress}%</span></div><div className="plan-item-progress"><Progress percent={plan.progress} size="small" showInfo={false} status={plan.status === 'cancelled' ? 'exception' : 'normal'} /></div></div>
+      <div className="plan-item-actions"><Tooltip title="上移"><Button type="text" size="small" disabled={index <= 0} icon={<UpOutlined />} onClick={() => onMove(plan.id, siblings.map((item) => item.plan.id), -1)} /></Tooltip><Tooltip title="下移"><Button type="text" size="small" disabled={index >= siblings.length - 1} icon={<DownOutlined />} onClick={() => onMove(plan.id, siblings.map((item) => item.plan.id), 1)} /></Tooltip><Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(plan)} aria-label="编辑计划" /><Popconfirm title="删除这个计划？" description="其直接下级计划也会被删除。" onConfirm={() => onDelete(plan)} okText="删除" cancelText="取消"><Button type="text" danger size="small" icon={<DeleteOutlined />} aria-label="删除计划" /></Popconfirm></div>
+    </div>
+    {childCount > 0 && !collapsed && <div className="plan-tree-children">{node.children.map((child, childIndex) => <PlanItem key={child.plan.id} node={child} index={childIndex} siblings={node.children} depth={depth + 1} collapsedIds={collapsedIds} onToggleCollapse={onToggleCollapse} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} onMove={onMove} />)}</div>}
+  </>;
 }
