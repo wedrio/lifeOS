@@ -26,6 +26,7 @@ interface AccountFormValues {
   icon: string;
   initialBalance: number;
   archived: boolean;
+  kind: 'cash' | 'credit';
 }
 
 export function FinanceCatalogDrawer({ open, onClose, onChanged }: FinanceCatalogDrawerProps) {
@@ -69,8 +70,12 @@ export function FinanceCatalogDrawer({ open, onClose, onChanged }: FinanceCatalo
       </> : <>
         <div className="drawer-action"><Button type="primary" icon={<PlusOutlined />} onClick={() => setAccountEditing(null)}>新建账户</Button></div>
         <Table rowKey="id" size="small" pagination={false} dataSource={accounts} scroll={{ x: 580 }} columns={[
-          { title: '账户', render: (_, item: Account) => <Space><span style={{ fontSize: 19 }}>{item.icon}</span><span>{item.name}</span>{item.archived && <Tag>已归档</Tag>}</Space> },
-          { title: '当前余额', width: 130, render: (_, item: Account) => formatCents(balances[item.id] ?? item.initialBalance) },
+          { title: '账户', render: (_, item: Account) => <Space><span style={{ fontSize: 19 }}>{item.icon}</span><span>{item.name}</span>{item.kind === 'credit' && <Tag color="orange">信用</Tag>}{item.archived && <Tag>已归档</Tag>}</Space> },
+          { title: '当前余额', width: 130, render: (_, item: Account) => {
+            const balance = balances[item.id] ?? item.initialBalance;
+            if (item.kind === 'credit' && balance < 0) return <span style={{ color: '#db5161' }}>欠款 {formatCents(-balance)}</span>;
+            return formatCents(balance);
+          } },
           { title: '操作', width: 126, render: (_, item: Account) => <Space size={0}><Button type="link" size="small" icon={<EditOutlined />} onClick={() => setAccountEditing(item)}>编辑</Button><Popconfirm title="删除这个账户？" description="已有账单引用时不可删除。" onConfirm={() => removeAccount(item)} okText="删除" cancelText="取消"><Button type="link" danger size="small" icon={<DeleteOutlined />}>删除</Button></Popconfirm></Space> },
         ]} />
       </>}
@@ -95,12 +100,12 @@ function CategoryModal({ category, categories, onClose, onSaved }: { category?: 
 
 function AccountModal({ account, onClose, onSaved }: { account?: Account; onClose: () => void; onSaved: () => Promise<void> }) {
   const [form] = Form.useForm<AccountFormValues>();
-  useEffect(() => { form.setFieldsValue({ name: account?.name, icon: account?.icon ?? '💳', initialBalance: account ? fromCents(account.initialBalance) : 0, archived: account?.archived ?? false }); }, [account, form]);
+  useEffect(() => { form.setFieldsValue({ name: account?.name, icon: account?.icon ?? '💳', initialBalance: account ? fromCents(account.initialBalance) : 0, archived: account?.archived ?? false, kind: account?.kind ?? 'cash' }); }, [account, form]);
   const submit = async (values: AccountFormValues) => {
     const input = { ...values, initialBalance: toCents(values.initialBalance) } satisfies AccountInput;
     const result = accountInputSchema.safeParse(input);
     if (!result.success) return message.error(result.error.issues[0]?.message ?? '请检查账户信息');
     try { if (account) await dataSource.finance.updateAccount(account.id, result.data); else await dataSource.finance.createAccount(result.data); message.success(account ? '账户已更新' : '账户已创建'); await onSaved(); } catch (error) { message.error(error instanceof Error ? error.message : '保存失败'); }
   };
-  return <Modal open title={account ? '编辑账户' : '新建账户'} onCancel={onClose} footer={null} destroyOnClose><Form form={form} layout="vertical" onFinish={submit} initialValues={{ icon: '💳', initialBalance: 0, archived: false }}><Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入账户名称' }]}><Input maxLength={60} placeholder="例如：招商银行卡" /></Form.Item><Form.Item name="icon" label="图标" rules={[{ required: true }]}><Input maxLength={8} /></Form.Item><Form.Item name="initialBalance" label="初始余额"><InputNumber min={0} precision={2} prefix="¥" style={{ width: '100%' }} /></Form.Item><Form.Item name="archived" label="归档账户" valuePropName="checked"><Switch checkedChildren="已归档" unCheckedChildren="使用中" /></Form.Item><div className="modal-footer"><Button onClick={onClose}>取消</Button><Button type="primary" htmlType="submit">保存</Button></div></Form></Modal>;
+  return <Modal open title={account ? '编辑账户' : '新建账户'} onCancel={onClose} footer={null} destroyOnClose><Form form={form} layout="vertical" onFinish={submit} initialValues={{ icon: '💳', initialBalance: 0, archived: false, kind: 'cash' }}><Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入账户名称' }]}><Input maxLength={60} placeholder="例如：招商银行卡" /></Form.Item><Form.Item name="icon" label="图标" rules={[{ required: true }]}><Input maxLength={8} /></Form.Item><Form.Item name="initialBalance" label="初始余额"><InputNumber min={0} precision={2} prefix="¥" style={{ width: '100%' }} /></Form.Item><Form.Item name="kind" label="账户性质"><Select options={[{ label: '普通账户（现金 / 银行卡 / 支付宝）', value: 'cash' }, { label: '信用账户（花呗 / 信用卡，余额可为负）', value: 'credit' }]} /></Form.Item><Form.Item name="archived" label="归档账户" valuePropName="checked"><Switch checkedChildren="已归档" unCheckedChildren="使用中" /></Form.Item><div className="modal-footer"><Button onClick={onClose}>取消</Button><Button type="primary" htmlType="submit">保存</Button></div></Form></Modal>;
 }

@@ -110,12 +110,13 @@ export interface ReadingStats {
   categoryDistribution: Array<{ category: string; count: number }>;
 }
 
-export type TransactionType = 'expense' | 'income';
+export type TransactionType = 'expense' | 'income' | 'repayment';
+export type CategoryType = 'expense' | 'income';
 export interface Category extends BaseEntity {
   name: string;
   icon: string;
   color: string;
-  type: TransactionType;
+  type: CategoryType;
   parentId?: string;
   isSystem: boolean;
 }
@@ -125,14 +126,19 @@ export interface Account extends BaseEntity {
   icon: string;
   initialBalance: number;
   archived: boolean;
+  /** v2.12 信用账户（花呗/信用卡）：余额可为负，前端以「欠款」展示 */
+  kind?: 'cash' | 'credit';
 }
 export type AccountInput = Omit<Account, keyof BaseEntity>;
 export interface Transaction extends BaseEntity {
   type: TransactionType;
   /** Amount in cents. */
   amount: number;
-  categoryId: string;
+  /** 支出/收入分类；还款（repayment）无分类 */
+  categoryId?: string;
   accountId: string;
+  /** 还款目标信用账户（仅 type='repayment'） */
+  toAccountId?: string;
   date: ISODate;
   note?: string;
   tags: string[];
@@ -214,8 +220,11 @@ export interface Settings extends BaseEntity {
   makeupCardBalance: number;
   /** 已发放月份 'YYYY-MM'，用于判断是否需要重新发放 */
   makeupCardMonth: string;
+  /** v2.12 每日三餐额度（分），0 表示未启用该餐 */
+  mealBudget: MealBudget;
 }
-export type SettingsInput = Pick<Settings, 'currency' | 'theme' | 'weekStartsOn' | 'autoRollOverIncompletePlans' | 'annualReadingTarget'>;
+export interface MealBudget { breakfast: number; lunch: number; dinner: number; }
+export type SettingsInput = Pick<Settings, 'currency' | 'theme' | 'weekStartsOn' | 'autoRollOverIncompletePlans' | 'annualReadingTarget'> & { mealBudget?: MealBudget };
 
 export interface ExpiringAsset {
   asset: Asset;
@@ -225,7 +234,7 @@ export interface DashboardStats {
   today: ISODate;
   plan: { completed: number; total: number };
   habits: { completed: number; total: number };
-  finance: { todayExpense: number; monthExpense: number; budget?: Budget; budgetSpent: number };
+  finance: { todayExpense: number; monthExpense: number; budget?: Budget; budgetSpent: number; meal: MealBudgetStats };
   expiringAssets: ExpiringAsset[];
   overduePlans: Plan[];
   todayPlans: Plan[];
@@ -237,6 +246,14 @@ export interface DashboardStats {
     finishedThisYear: number;
     totalPagesRead: number;
   };
+}
+/** v2.12 餐费预算统计：三餐今日已花（分）+ 本月累计节约/超支（分） */
+export interface MealBudgetStats {
+  breakfast: number;
+  lunch: number;
+  dinner: number;
+  monthSaved: number;
+  monthOverspent: number;
 }
 
 export type BackupImportMode = 'replace' | 'merge';

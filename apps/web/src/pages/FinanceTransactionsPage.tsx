@@ -54,7 +54,7 @@ export function FinanceTransactionsPage() {
 
   const categoryById = useMemo(() => new Map(categories.map((item) => [item.id, item])), [categories]);
   const accountById = useMemo(() => new Map(accounts.map((item) => [item.id, item])), [accounts]);
-  const filteredTotal = transactions.reduce((total, item) => total + (item.type === 'expense' ? -item.amount : item.amount), 0);
+  const filteredTotal = transactions.reduce((total, item) => total + (item.type === 'expense' ? -item.amount : item.type === 'income' ? item.amount : 0), 0);
 
   const editTransaction = (transaction?: Transaction) => {
     setEditing(transaction);
@@ -96,7 +96,7 @@ export function FinanceTransactionsPage() {
       <Card>
         <div className="finance-toolbar">
           <div className="finance-filters">
-            <Select aria-label="筛选收支类型" allowClear placeholder="收支类型" value={filters.type} onChange={(type) => setFilters((current) => ({ ...current, type }))} options={[{ label: '支出', value: 'expense' }, { label: '收入', value: 'income' }]} />
+            <Select aria-label="筛选收支类型" allowClear placeholder="收支类型" value={filters.type} onChange={(type) => setFilters((current) => ({ ...current, type }))} options={[{ label: '支出', value: 'expense' }, { label: '收入', value: 'income' }, { label: '还款', value: 'repayment' }]} />
             <Select aria-label="筛选分类" allowClear showSearch optionFilterProp="label" placeholder="分类" value={filters.categoryId} onChange={(categoryId) => setFilters((current) => ({ ...current, categoryId }))} options={categories.map((item) => ({ value: item.id, label: `${item.icon} ${item.name}` }))} />
             <Select aria-label="筛选账户" allowClear showSearch optionFilterProp="label" placeholder="账户" value={filters.accountId} onChange={(accountId) => setFilters((current) => ({ ...current, accountId }))} options={accounts.map((item) => ({ value: item.id, label: `${item.icon} ${item.name}` }))} />
             <Input aria-label="开始日期" className="finance-date-filter" type="date" value={filters.from} onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value || undefined }))} />
@@ -116,10 +116,17 @@ export function FinanceTransactionsPage() {
           dataSource={transactions}
           columns={[
             { title: '日期', dataIndex: 'date', width: 116, render: (date: string) => formatShortDate(date) },
-            { title: '分类', width: 142, render: (_, item: Transaction) => { const category = categoryById.get(item.categoryId); return <Space size={5}><span>{category?.icon ?? '🏷️'}</span><span>{category?.name ?? '已删除分类'}</span></Space>; } },
+            { title: '分类', width: 142, render: (_, item: Transaction) => {
+              if (item.type === 'repayment') {
+                const toAccount = accountById.get(item.toAccountId ?? '');
+                return <Space size={5}><span>🔁</span><span>还款 → {toAccount ? toAccount.name : '未知账户'}</span></Space>;
+              }
+              const category = categoryById.get(item.categoryId ?? '');
+              return <Space size={5}><span>{category?.icon ?? '🏷️'}</span><span>{category?.name ?? '已删除分类'}</span></Space>;
+            } },
             { title: '账户', width: 125, render: (_, item: Transaction) => { const account = accountById.get(item.accountId); return <span>{account ? `${account.icon} ${account.name}` : '已删除账户'}</span>; } },
             { title: '备注 / 标签', render: (_, item: Transaction) => <div>{item.note && <div className="transaction-note">{item.note}</div>}{item.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}</div> },
-            { title: '金额', width: 128, align: 'right', render: (_, item: Transaction) => <span className={item.type === 'expense' ? 'transaction-expense' : 'transaction-income'}>{item.type === 'expense' ? '-' : '+'}{formatCents(item.amount)}</span> },
+            { title: '金额', width: 128, align: 'right', render: (_, item: Transaction) => <span className={item.type === 'expense' ? 'transaction-expense' : item.type === 'income' ? 'transaction-income' : 'transaction-repayment'}>{item.type === 'expense' ? '-' : item.type === 'income' ? '+' : '⇄ '}{formatCents(item.amount)}</span> },
             { title: '操作', width: 110, render: (_, item: Transaction) => <Space size={0}><Button type="link" size="small" icon={<EditOutlined />} onClick={() => editTransaction(item)}>编辑</Button><Popconfirm title="删除这笔账单？" onConfirm={() => void deleteTransaction(item)} okText="删除" cancelText="取消"><Button type="link" danger size="small" icon={<DeleteOutlined />}>删除</Button></Popconfirm></Space> },
           ]}
         />

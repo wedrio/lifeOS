@@ -77,16 +77,25 @@ export const accountInputSchema = z.object({
   icon: z.string().min(1).max(8),
   initialBalance: money,
   archived: z.boolean(),
+  kind: z.enum(['cash', 'credit']).optional(),
 });
 
 export const transactionInputSchema = z.object({
-  type: z.enum(['expense', 'income']),
+  type: z.enum(['expense', 'income', 'repayment']),
   amount: money.positive('金额必须大于 0'),
-  categoryId: z.string().min(1),
+  categoryId: z.string().min(1).optional(),
   accountId: z.string().min(1),
+  toAccountId: z.string().min(1).optional(),
   date,
   note: z.string().max(1000).optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(20),
+}).superRefine((transaction, context) => {
+  if (transaction.type === 'repayment') {
+    if (!transaction.toAccountId) context.addIssue({ code: z.ZodIssueCode.custom, path: ['toAccountId'], message: '请选择还款的信用账户' });
+    else if (transaction.toAccountId === transaction.accountId) context.addIssue({ code: z.ZodIssueCode.custom, path: ['toAccountId'], message: '付款账户与还款账户不能相同' });
+  } else if (!transaction.categoryId) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['categoryId'], message: '请选择分类' });
+  }
 });
 
 export const budgetInputSchema = z.object({
@@ -137,4 +146,5 @@ export const settingsInputSchema = z.object({
   weekStartsOn: z.union([z.literal(0), z.literal(1)]),
   autoRollOverIncompletePlans: z.boolean(),
   annualReadingTarget: z.number().int().min(1).max(500).default(12),
+  mealBudget: z.object({ breakfast: money, lunch: money, dinner: money }).optional(),
 });

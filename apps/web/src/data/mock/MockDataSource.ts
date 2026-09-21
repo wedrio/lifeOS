@@ -13,6 +13,7 @@ import type {
   BookNoteInput,
   Budget,
   BudgetInput,
+  MealBudgetStats,
   Category,
   CategoryInput,
   DataSource,
@@ -76,7 +77,8 @@ function systemEntity<T extends object>(entityId: string, value: T): T & BaseEnt
 
 function defaultCategories(): Category[] {
   const expense = [
-    ['dining', '餐饮', '🍜', '#f08c53'], ['transport', '交通', '🚇', '#5d9cec'],
+    ['dining', '餐饮', '🍜', '#f08c53'], ['breakfast', '早餐', '🥟', '#f0a44a'], ['lunch', '午餐', '🍚', '#e8a838'], ['dinner', '晚餐', '🍽️', '#d97742'],
+    ['transport', '交通', '🚇', '#5d9cec'],
     ['shopping', '购物', '🛍️', '#dd6b9a'], ['housing', '居住', '🏠', '#8a6fdf'],
     ['entertainment', '娱乐', '🎮', '#a86bdb'], ['medical', '医疗', '💊', '#e67373'],
     ['learning', '学习', '📚', '#5ab99a'], ['social', '人情', '🎁', '#d79463'],
@@ -98,6 +100,7 @@ function defaultAccounts(): Account[] {
     systemEntity('account-alipay', { name: '支付宝', icon: '🔵', initialBalance: 0, archived: false }),
     systemEntity('account-wechat', { name: '微信', icon: '🟢', initialBalance: 0, archived: false }),
     systemEntity('account-bank', { name: '银行卡', icon: '💳', initialBalance: 0, archived: false }),
+    systemEntity('account-huabei', { name: '花呗', icon: '💠', initialBalance: 0, archived: false, kind: 'credit' as const }),
   ];
 }
 
@@ -128,6 +131,7 @@ function initialStore(): MockStore {
       annualReadingTarget: 12,
       makeupCardBalance: 2,
       makeupCardMonth: now.slice(0, 7),
+      mealBudget: { breakfast: 0, lunch: 0, dinner: 0 },
     },
   };
 }
@@ -166,6 +170,24 @@ function migrateStore(store: MockStore): boolean {
   }
   if (!store.settings.annualReadingTarget) {
     store.settings.annualReadingTarget = 12;
+    changed = true;
+  }
+  // v2.12：旧数据补齐餐次分类、内置花呗信用账户与每日餐费额度（幂等，不覆盖用户数据）
+  const mealCategories = [
+    ['category-breakfast', '早餐', '🥟', '#f0a44a'], ['category-lunch', '午餐', '🍚', '#e8a838'], ['category-dinner', '晚餐', '🍽️', '#d97742'],
+  ] as const;
+  mealCategories.forEach(([id, name, icon, color]) => {
+    if (!store.categories.some((item) => item.id === id)) {
+      store.categories.push(systemEntity(id, { name, icon, color, type: 'expense' as const, isSystem: true }));
+      changed = true;
+    }
+  });
+  if (!store.accounts.some((item) => item.id === 'account-huabei')) {
+    store.accounts.push(systemEntity('account-huabei', { name: '花呗', icon: '💠', initialBalance: 0, archived: false, kind: 'credit' as const }));
+    changed = true;
+  }
+  if (!store.settings.mealBudget) {
+    store.settings.mealBudget = { breakfast: 0, lunch: 0, dinner: 0 };
     changed = true;
   }
   if (!Array.isArray(store.books)) {
@@ -914,6 +936,19 @@ export class MockDataSource implements DataSource {
       const year = today.slice(0, 4);
       const expenses = store.transactions.filter((item) => item.type === 'expense');
       const total = (items: Transaction[]) => items.reduce((sum, item) => sum + item.amount, 0);
+      // v2.12 餐费预算：三餐今日已花 + 本月累计节约/超支（额度×已过天数−实际，正为节约负为超支）
+      const mealBudget = store.settings.mealBudget ?? { breakfast: 0, lunch: 0, dinner: 0 };
+      const mealCategories: Record<'breakfast' | 'lunch' | 'dinner', string> = { breakfast: 'category-breakfast', lunch: 'category-lunch', dinner: 'category-dinner' };
+      const dayOfMonth = Number(today.slice(8));
+      const meal = { monthSaved: 0, monthOverspent: 0, breakfast: 0, lunch: 0, dinner: 0 } as MealBudgetStats;
+      (['breakfast', 'lunch', 'dinner'] as const).forEach((mealKey) => {
+        const categoryId = mealCategories[mealKey];
+        meal[mealKey] = total(expenses.filter((item) => item.date === today && item.categoryId === categoryId));
+        const budgetMonth = mealBudget[mealKey] * dayOfMonth;
+        const spentMonth = total(expenses.filter((item) => item.date.startsWith(month) && item.categoryId === categoryId));
+        const diff = budgetMonth - spentMonth;
+        if (diff > 0) meal.monthSaved += diff; else meal.monthOverspent += -diff;
+      });
       const currentBudget = store.budgets.find((item) => item.period === month);
       const daysUntil = (value: string) => Math.ceil((Date.parse(`${value}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
       const expiringAssets = store.assets
@@ -935,6 +970,7 @@ export class MockDataSource implements DataSource {
           monthExpense: total(expenses.filter((item) => item.date.startsWith(month))),
           budget: currentBudget,
           budgetSpent: total(expenses.filter((item) => item.date.startsWith(month))),
+          meal,
         },
         expiringAssets,
         overduePlans,
@@ -960,7 +996,16 @@ export class MockDataSource implements DataSource {
         expense,
         balanceByAccount: store.accounts.map((account) => ({
           account,
-          balance: account.initialBalance + sum(store.transactions.filter((item) => item.accountId === account.id && item.type === 'income')) - sum(store.transactions.filter((item) => item.accountId === account.id && item.type === 'expense')),
+          // v2.12：还款使付款账户余额减少、目标信用账户欠款减少（余额 +amount）
+          balance: store.transactions.reduce((balance, item) => {
+            if (item.accountId === account.id) {
+              if (item.type === 'income') return balance + item.amount;
+              if (item.type === 'expense') return balance - item.amount;
+              if (item.type === 'repayment') return balance - item.amount;
+            }
+            if (item.type === 'repayment' && item.toAccountId === account.id) return balance + item.amount;
+            return balance;
+          }, account.initialBalance),
         })),
         expenseByCategory: store.categories.filter((category) => category.type === 'expense').map((category) => ({
           category,
