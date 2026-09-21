@@ -23,7 +23,7 @@ import type { BackupImportMode, BackupPayload, Settings, SettingsInput } from '@
 import { settingsInputSchema } from '@lifeos/shared';
 import { dataSource } from '../data';
 import { useUIStore, type ParticleDensity } from '../stores/uiStore';
-import { webCapabilities } from '../platform/webCapabilities';
+import { getPlatformCapabilities } from '../platform';
 import { SpotlightCard } from '../components/ui';
 import '../styles/settings.css';
 
@@ -82,7 +82,7 @@ export function SettingsPage() {
     try {
       const backup = await dataSource.backup.exportData();
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
-      await webCapabilities.saveFile(`lifeos-backup-${backup.exportedAt.slice(0, 10)}.json`, blob);
+      await getPlatformCapabilities().saveFile(`lifeos-backup-${backup.exportedAt.slice(0, 10)}.json`, blob);
       message.success('备份文件已导出');
     } catch (error) {
       message.error(error instanceof Error ? error.message : '导出失败');

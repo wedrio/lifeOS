@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { AppRoutes } from './routes';
 import { useUIStore } from './stores/uiStore';
 import { dataSource } from './data';
@@ -106,9 +106,9 @@ function Application() {
           : undefined,
       }}
     >
-      <BrowserRouter>
+      <HashRouter>
         <AppRoutes />
-      </BrowserRouter>
+      </HashRouter>
     </ConfigProvider>
   );
 }

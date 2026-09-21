@@ -8,4 +8,5 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
-src-tauri/target/
+**/src-tauri/target/
+**/src-tauri/gen/schemas/
