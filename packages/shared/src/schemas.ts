@@ -9,9 +9,14 @@ export const habitInputSchema = z.object({
   color: z.string().regex(/^#(?:[\dA-Fa-f]{3}){1,2}$/),
   frequency: z.enum(['daily', 'weekly', 'custom']),
   timesPerPeriod: z.number().int().min(1).max(365),
+  weekdays: z.array(z.number().int().min(1).max(7)).max(7).optional(),
   reminderTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   allowBackfillDays: z.number().int().min(0).max(365),
   archived: z.boolean().optional(),
+}).superRefine((value, ctx) => {
+  if (value.frequency === 'custom' && (!value.weekdays || value.weekdays.length === 0)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['weekdays'], message: '请至少选择一个星期几' });
+  }
 });
 
 export const planInputSchema = z.object({

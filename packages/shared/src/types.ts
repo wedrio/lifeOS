@@ -14,7 +14,10 @@ export interface Habit extends BaseEntity {
   icon: string;
   color: string;
   frequency: HabitFrequency;
+  /** daily: 每天完成 N 次；weekly: 每周完成 N 次（弹性）；custom: 固定 1 */
   timesPerPeriod: number;
+  /** custom 专用：调度星期几（1=周一 … 7=周日），仅调度日需要打卡 */
+  weekdays?: number[];
   reminderTime?: string;
   allowBackfillDays: number;
   archived: boolean;
@@ -23,6 +26,8 @@ export type HabitInput = Omit<Habit, keyof BaseEntity | 'archived'> & { archived
 export interface HabitCheckIn extends BaseEntity {
   habitId: string;
   date: ISODate;
+  /** 当日完成次数，默认 1，上限为 habit.timesPerPeriod（daily 多次打卡逐次累加） */
+  count?: number;
   note?: string;
 }
 

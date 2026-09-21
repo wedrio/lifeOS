@@ -1,4 +1,6 @@
-export const currentDate = () => new Date().toISOString().slice(0, 10);
+import { today } from './dates';
+
+export const currentDate = today;
 export const currentMonth = () => currentDate().slice(0, 7);
 
 const currencyFormatter = new Intl.NumberFormat('zh-CN', {

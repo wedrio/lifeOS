@@ -4,7 +4,7 @@ import { CheckOutlined, DeleteOutlined, EditOutlined, FireOutlined, PlusOutlined
 import type { Habit, HabitCheckIn, ISODate } from '@lifeos/shared';
 import { dataSource, generateDisciplineDemoData } from '../data';
 import { useSearchParams } from 'react-router-dom';
-import { calculateHabitStats, today } from '../lib/dates';
+import { calculateHabitStats, habitWeekProgress, habitWeekdayLabel, isHabitDue, today } from '../lib/dates';
 import { HabitFormModal } from '../components/discipline/HabitFormModal';
 import { HabitHeatmap } from '../components/discipline/HabitHeatmap';
 import { HabitStatBlocks } from '../components/discipline/HabitStatBlocks';
@@ -13,7 +13,7 @@ import '../styles/discipline.css';
 
 type HabitView = 'active' | 'archived';
 
-const frequencyLabel = (habit: Habit) => habit.frequency === 'daily' ? `每天 ${habit.timesPerPeriod} 次` : habit.frequency === 'weekly' ? `每周 ${habit.timesPerPeriod} 次` : `自定义 ${habit.timesPerPeriod} 次`;
+const frequencyLabel = (habit: Habit) => habit.frequency === 'daily' ? `每天 ${habit.timesPerPeriod} 次` : habit.frequency === 'weekly' ? `每周 ${habit.timesPerPeriod} 次` : habitWeekdayLabel(habit);
 
 export function HabitsPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -51,20 +51,24 @@ export function HabitsPage() {
   const selectedHabit = habits.find((habit) => habit.id === selectedId);
   const selectedCheckIns = selectedHabit ? checkIns[selectedHabit.id] ?? [] : [];
   const activeHabits = habits.filter((habit) => !habit.archived);
-  const checkedToday = activeHabits.filter((habit) => (checkIns[habit.id] ?? []).some((item) => item.date === today())).length;
+  // 今日打卡进度只统计「今天需要打卡」的习惯
+  const dueToday = activeHabits.filter((habit) => isHabitDue(habit, today()));
+  const doneToday = (habit: Habit) => (checkIns[habit.id] ?? []).find((item) => item.date === today())?.count ?? 0;
+  const checkedToday = dueToday.filter((habit) => doneToday(habit) > 0).length;
 
   const openEditor = (habit?: Habit) => { setEditing(habit); setEditorOpen(true); };
   const toggle = async (habit: Habit, date: ISODate) => {
-    const exists = (checkIns[habit.id] ?? []).some((item) => item.date === date);
+    const record = (checkIns[habit.id] ?? []).find((item) => item.date === date);
+    const dailyTarget = habit.frequency === 'daily' ? habit.timesPerPeriod : 1;
     try {
-      if (exists) {
+      if (record && (record.count ?? 1) >= dailyTarget) {
         await dataSource.habits.uncheck(habit.id, date);
-        message.success(`${date} 的打卡已取消`);
+        message.success(`${date} 的一次打卡已取消`);
       } else {
         await dataSource.habits.checkIn(habit.id, date);
         if (date === today()) {
           fireConfetti();
-          message.success('今日打卡完成！太棒了 🎉');
+          message.success('打卡成功，继续保持！🎉');
         } else {
           message.success('补打成功');
         }
@@ -101,9 +105,9 @@ export function HabitsPage() {
           <div style={{ padding: 20 }}>
             <Typography.Text type="secondary">今日打卡进度</Typography.Text>
             <Typography.Title level={2} style={{ margin: '4px 0 0' }}>
-              <CountUp to={checkedToday} /> <Typography.Text type="secondary">/ <CountUp to={activeHabits.length} /></Typography.Text>
+              <CountUp to={checkedToday} /> <Typography.Text type="secondary">/ <CountUp to={dueToday.length} /></Typography.Text>
             </Typography.Title>
-            <Progress percent={activeHabits.length ? Math.round(checkedToday / activeHabits.length * 100) : 0} showInfo={false} strokeColor="#2f9c67" />
+            <Progress percent={dueToday.length ? Math.round(checkedToday / dueToday.length * 100) : 0} showInfo={false} strokeColor="#2f9c67" />
           </div>
         </SpotlightCard>
       </Col>
@@ -132,9 +136,21 @@ export function HabitsPage() {
 }
 
 function HabitCard({ habit, checkIns, selected, onSelect, onToggle, onEdit, onDelete }: { habit: Habit; checkIns: HabitCheckIn[]; selected: boolean; onSelect: () => void; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
-  const checked = checkIns.some((item) => item.date === today());
   const stats = calculateHabitStats(habit, checkIns);
   const habitGlow = habit.color ? `${habit.color}26` : 'rgba(35, 141, 91, 0.16)';
+  const dueToday = isHabitDue(habit, today());
+  const todayCount = checkIns.find((item) => item.date === today())?.count ?? 0;
+  const dailyTarget = habit.frequency === 'daily' ? habit.timesPerPeriod : 1;
+  const weekProgress = habitWeekProgress(habit, checkIns);
+  // daily/custom 看今天次数；weekly 只看本周累计，不看今天是否打过
+  const reached = habit.frequency === 'weekly' ? weekProgress.done >= weekProgress.target : todayCount >= dailyTarget;
+
+  const buttonText = () => {
+    if (!dueToday) return `今日无需打卡（${habitWeekdayLabel(habit)}）`;
+    if (habit.frequency === 'weekly') return weekProgress.done >= weekProgress.target ? '本周已达标 ✓' : `打卡（本周 ${weekProgress.done}/${weekProgress.target}）`;
+    if (dailyTarget > 1) return reached ? `今日已完成 ${todayCount}/${dailyTarget}` : `打卡（${todayCount}/${dailyTarget}）`;
+    return reached ? '已完成' : '完成今日打卡';
+  };
 
   return <Col xs={24} md={12} xl={8}>
     <SpotlightCard
@@ -153,18 +169,18 @@ function HabitCard({ habit, checkIns, selected, onSelect, onToggle, onEdit, onDe
           </div>
         </div>
         <div className="habit-meta">
-          <span><FireOutlined style={{ color: '#ef9c38' }} /> 连续 {stats.currentStreak} 天</span>
+          <span><FireOutlined style={{ color: '#ef9c38' }} /> 连续 {stats.currentStreak} {stats.streakUnit === 'week' ? '周' : '天'}</span>
           {habit.reminderTime ? <span>🕘 {habit.reminderTime}</span> : <span>无需提醒</span>}
         </div>
         <Progress percent={stats.recent30Rate} showInfo={false} strokeColor={habit.color} size="small" />
         <div className="habit-actions">
           <Button
-            type={checked ? 'default' : 'primary'}
+            type={reached ? 'default' : 'primary'}
             icon={<CheckOutlined />}
-            disabled={habit.archived}
+            disabled={habit.archived || !dueToday}
             onClick={(event) => { event.stopPropagation(); onToggle(); }}
           >
-            {checked ? '已完成' : '完成今日打卡'}
+            {buttonText()}
           </Button>
           <Button type="text" icon={<EditOutlined />} onClick={(event) => { event.stopPropagation(); onEdit(); }} aria-label="编辑习惯" />
           <Popconfirm title="删除这个习惯？" description="所有历史打卡也会删除。" onConfirm={(event) => { event?.stopPropagation(); onDelete(); }} okText="删除" cancelText="取消">

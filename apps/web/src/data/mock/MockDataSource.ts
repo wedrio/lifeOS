@@ -34,6 +34,7 @@ import type {
   TransactionFilter,
   TransactionInput,
 } from '@lifeos/shared';
+import { isHabitDue, today as localToday } from '../../lib/dates';
 
 const STORAGE_KEY = 'lifeos:mock-data:v1';
 const USER_ID = 'mock-user';
@@ -55,7 +56,7 @@ interface MockStore {
 }
 
 const timestamp = () => new Date().toISOString();
-const dateToday = (): ISODate => new Date().toISOString().slice(0, 10);
+const dateToday = (): ISODate => localToday();
 const monthToday = () => dateToday().slice(0, 7);
 const yearToday = () => Number(dateToday().slice(0, 4));
 const id = () => globalThis.crypto?.randomUUID?.() ?? `mock-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -207,7 +208,8 @@ function demoDisciplineStore(store: MockStore): number {
   const habits: Habit[] = [
     { ...base(), id: 'demo-habit-read', name: '阅读 30 分钟', icon: '📚', color: '#5b5ce2', frequency: 'daily', timesPerPeriod: 1, reminderTime: '21:00', allowBackfillDays: 2, archived: false },
     { ...base(), id: 'demo-habit-exercise', name: '运动', icon: '🏃', color: '#e76f8a', frequency: 'weekly', timesPerPeriod: 3, reminderTime: '18:30', allowBackfillDays: 1, archived: false },
-    { ...base(), id: 'demo-habit-water', name: '喝够水', icon: '💧', color: '#53a8ff', frequency: 'daily', timesPerPeriod: 1, allowBackfillDays: 0, archived: false },
+    { ...base(), id: 'demo-habit-water', name: '喝够水（每日 3 次）', icon: '💧', color: '#53a8ff', frequency: 'daily', timesPerPeriod: 3, allowBackfillDays: 0, archived: false },
+    { ...base(), id: 'demo-habit-stretch', name: '颈部拉伸', icon: '🧘', color: '#2f9c67', frequency: 'custom', timesPerPeriod: 1, weekdays: [1, 3, 5], allowBackfillDays: 0, archived: false },
   ];
   const reference = dateToday();
   const checkIns: HabitCheckIn[] = [];
@@ -215,7 +217,8 @@ function demoDisciplineStore(store: MockStore): number {
     const date = shiftDate(reference, -offset);
     if (offset % 9 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-read', date });
     if (offset % 2 === 0 || offset % 5 === 0) checkIns.push({ ...base(), habitId: 'demo-habit-exercise', date });
-    if (offset % 6 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-water', date });
+    if (offset % 6 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-water', date, count: (offset % 3) + 1 });
+    if ([1, 3, 5].includes(new Date(`${date}T12:00:00Z`).getUTCDay() || 7) && offset % 7 !== 3) checkIns.push({ ...base(), habitId: 'demo-habit-stretch', date });
   }
   const year = reference.slice(0, 4);
   const month = reference.slice(0, 7);
@@ -535,15 +538,26 @@ export class MockDataSource implements DataSource {
       if (!Number.isFinite(targetTime)) throw new Error('日期格式应为 YYYY-MM-DD');
       if (targetTime > todayTime) throw new Error('不能为未来日期打卡');
       const daysAgo = Math.round((todayTime - targetTime) / 86_400_000);
-      if (daysAgo > habit.allowBackfillDays) throw new Error(`仅允许补打最近 ${habit.allowBackfillDays} 天`);
+      if (daysAgo > habit.allowBackfillDays) throw new Error(habit.allowBackfillDays > 0 ? `仅允许补打最近 ${habit.allowBackfillDays} 天` : '该习惯未开启补打卡');
+      const dailyTarget = habit.frequency === 'daily' ? habit.timesPerPeriod : 1;
       const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
-      if (existing) return existing;
-      const entity: HabitCheckIn = { ...base(), habitId, date, ...(note ? { note } : {}) };
+      if (existing) {
+        const count = existing.count ?? 1;
+        if (count >= dailyTarget) throw new Error('今日目标次数已完成，再点将逐次取消打卡');
+        return this.touch(existing, { count: count + 1 });
+      }
+      const entity: HabitCheckIn = { ...base(), habitId, date, count: 1, ...(note ? { note } : {}) };
       store.habitCheckIns.push(entity);
       return entity;
     }),
     uncheck: (habitId: string, date: ISODate) => this.mutate((store) => {
-      store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date));
+      const habit = store.habits.find((item) => item.id === habitId);
+      if (habit?.archived) throw new Error('已归档习惯不能修改打卡');
+      const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
+      if (!existing) return;
+      const count = existing.count ?? 1;
+      if (count > 1) this.touch(existing, { count: count - 1 });
+      else store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date));
     }),
     listCheckIns: (habitId: string, from: ISODate, to: ISODate) => this.query((store) =>
       store.habitCheckIns.filter((item) => item.habitId === habitId && item.date >= from && item.date <= to),
@@ -792,7 +806,10 @@ export class MockDataSource implements DataSource {
       const todayPlans = store.plans.filter((item) => item.level === 'day' && item.period === today).sort((a, b) => a.order - b.order);
       const overduePlans = store.plans.filter((item) => item.level === 'day' && item.period < today && !['completed', 'cancelled'].includes(item.status)).sort((a, b) => b.period.localeCompare(a.period) || a.order - b.order);
       const completedPlans = todayPlans.filter((item) => item.status === 'completed').length;
-      const completedHabits = store.habits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today)).length;
+      const activeHabits = store.habits.filter((item) => !item.archived);
+      // 今日打卡进度只统计「今天需要打卡」的习惯（custom 频率非调度日不计入分母）
+      const dueHabits = activeHabits.filter((habit) => isHabitDue(habit, today));
+      const completedHabits = dueHabits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today && (checkIn.count ?? 1) > 0)).length;
       const month = today.slice(0, 7);
       const year = today.slice(0, 4);
       const expenses = store.transactions.filter((item) => item.type === 'expense');
@@ -812,7 +829,7 @@ export class MockDataSource implements DataSource {
       return {
         today,
         plan: { completed: completedPlans, total: todayPlans.length },
-        habits: { completed: completedHabits, total: store.habits.filter((item) => !item.archived).length },
+        habits: { completed: completedHabits, total: dueHabits.length },
         finance: {
           todayExpense: total(expenses.filter((item) => item.date === today)),
           monthExpense: total(expenses.filter((item) => item.date.startsWith(month))),
