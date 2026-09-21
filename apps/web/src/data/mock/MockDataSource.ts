@@ -24,6 +24,8 @@ import type {
   MomentFilter,
   MomentInput,
   Plan,
+  PlanLevel,
+  PlanStatus,
   PlanFilter,
   PlanInput,
   ReadingLog,
@@ -237,9 +239,9 @@ function demoDisciplineStore(store: MockStore): number {
   const year = reference.slice(0, 4);
   const month = reference.slice(0, 7);
   const plans: Plan[] = [
-    { ...base(), id: 'demo-plan-year', title: '成为更有能量的自己', description: '建立稳定的学习、运动与休息节奏。', level: 'year', period: year, status: 'in_progress', progress: 55, priority: 'high', order: 0 },
-    { ...base(), id: 'demo-plan-month', title: '九月习惯养成', description: '完成阅读与运动目标。', level: 'month', period: month, parentId: 'demo-plan-year', status: 'in_progress', progress: 62, priority: 'high', order: 0 },
-    { ...base(), id: 'demo-plan-week', title: '本周复盘与训练', level: 'week', period: currentWeekPeriod(reference), parentId: 'demo-plan-month', status: 'in_progress', progress: 50, priority: 'medium', order: 0 },
+    { ...base(), id: 'demo-plan-year', title: '成为更有能量的自己', description: '建立稳定的学习、运动与休息节奏。', level: 'year', period: year, status: 'in_progress', progress: 20, priority: 'high', order: 0 },
+    { ...base(), id: 'demo-plan-month', title: '九月习惯养成', description: '完成阅读与运动目标。', level: 'month', period: month, parentId: 'demo-plan-year', status: 'in_progress', progress: 20, priority: 'high', order: 0 },
+    { ...base(), id: 'demo-plan-week', title: '本周复盘与训练', level: 'week', period: currentWeekPeriod(reference), parentId: 'demo-plan-month', status: 'in_progress', progress: 20, priority: 'medium', order: 0 },
     { ...base(), id: 'demo-plan-day-1', title: '完成 30 分钟阅读', level: 'day', period: reference, parentId: 'demo-plan-week', status: 'not_started', progress: 0, priority: 'high', order: 0 },
     { ...base(), id: 'demo-plan-day-2', title: '下班后慢跑 3 公里', level: 'day', period: reference, parentId: 'demo-plan-week', status: 'in_progress', progress: 40, priority: 'medium', order: 1 },
   ];
@@ -483,6 +485,22 @@ export class MockDataSource implements DataSource {
     return Object.assign(entity, patch, { updatedAt: timestamp() }) as T;
   }
 
+  /** 父计划进度自动汇总：叶子计划手动维护；父计划由未取消直接子计划进度平均（四舍五入）计算，
+   *  状态随进度派生（100→completed，>0→in_progress，0→not_started）；已取消计划不参与也不被改写。
+   *  按层级自底向上全量重算，覆盖增删改与级联勾选的所有路径。 */
+  private recalcAllPlanProgress(store: MockStore) {
+    const levelDepth: Record<PlanLevel, number> = { day: 0, week: 1, month: 2, year: 3 };
+    [...store.plans]
+      .sort((a, b) => levelDepth[a.level] - levelDepth[b.level])
+      .forEach((plan) => {
+        if (plan.status === 'cancelled') return;
+        const children = store.plans.filter((item) => item.parentId === plan.id && item.status !== 'cancelled');
+        if (children.length === 0) return;
+        const progress = Math.round(children.reduce((sum, item) => sum + item.progress, 0) / children.length);
+        this.touch(plan, { progress, status: (progress >= 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started') as PlanStatus });
+      });
+  }
+
   async generateDemoData(): Promise<number> {
     return this.mutate((store) => {
       if (store.transactions.length > 0) return 0;
@@ -621,15 +639,34 @@ export class MockDataSource implements DataSource {
       const nextOrder = input.order ?? store.plans.filter((item) => item.period === input.period).length;
       const entity: Plan = { ...base(), ...input, order: nextOrder };
       store.plans.push(entity);
+      this.recalcAllPlanProgress(store);
       return entity;
     }),
     update: (planId: string, patch: Partial<PlanInput>) => this.mutate((store) => {
       const entity = store.plans.find((item) => item.id === planId);
       if (!entity) throw new Error('未找到该计划');
-      return this.touch(entity, patch);
+      this.touch(entity, patch);
+      // 父计划勾选/取消级联到后代：勾选完成全部未取消后代；取消勾选仅回退已完成后代（进行中的保持不变）
+      if (patch.status === 'completed' || patch.status === 'not_started') {
+        const cascade = (parentId: string) => {
+          store.plans.filter((item) => item.parentId === parentId && item.status !== 'cancelled').forEach((child) => {
+            if (patch.status === 'completed') {
+              if (child.status !== 'completed') this.touch(child, { status: 'completed', progress: 100 });
+            } else if (child.status === 'completed') {
+              this.touch(child, { status: 'not_started', progress: 0 });
+            }
+            cascade(child.id);
+          });
+        };
+        cascade(entity.id);
+      }
+      // 父计划的 progress/status 以子计划汇总结果为准（覆盖手动值）
+      this.recalcAllPlanProgress(store);
+      return entity;
     }),
     remove: (planId: string) => this.mutate((store) => {
       store.plans = store.plans.filter((item) => item.id !== planId && item.parentId !== planId);
+      this.recalcAllPlanProgress(store);
     }),
     reorder: (ids: string[]) => this.mutate((store) => {
       ids.forEach((planId, order) => {
