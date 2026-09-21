@@ -12,7 +12,6 @@ import {
 import type { DashboardStats, Plan } from '@lifeos/shared';
 import { useNavigate } from 'react-router-dom';
 import { dataSource, generateAllDemoData } from '../data';
-import { addDays, today } from '../lib/dates';
 import { BookCover } from '../components/reading/BookCover';
 import { CountUp, fireCelebrationCannon, fireConfetti, ShinyText, SpotlightCard, TiltedCard } from '../components/ui';
 import '../styles/dashboard.css';
@@ -27,10 +26,6 @@ export function DashboardPage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const settings = await dataSource.settings.get();
-      if (settings.autoRollOverIncompletePlans) {
-        await dataSource.plans.rollOverIncompleteDayPlans(addDays(today(), -1), today());
-      }
       setStats(await dataSource.stats.dashboard());
     } catch (error) {
       message.error(error instanceof Error ? error.message : '主面板加载失败');

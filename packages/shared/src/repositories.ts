@@ -26,7 +26,7 @@ export interface PlanRepository {
   update(id: string, patch: Partial<PlanInput>): Promise<Plan>;
   remove(id: string): Promise<void>;
   reorder(ids: string[]): Promise<void>;
-  rollOverIncompleteDayPlans(from: ISODate, to: ISODate): Promise<number>;
+  rollOverOverdueDayPlans(to: ISODate): Promise<number>;
 }
 
 export interface BookRepository {

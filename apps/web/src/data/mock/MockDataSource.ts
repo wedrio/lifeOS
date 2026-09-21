@@ -683,9 +683,9 @@ export class MockDataSource implements DataSource {
         if (entity) this.touch(entity, { order });
       });
     }),
-    rollOverIncompleteDayPlans: (from: ISODate, to: ISODate) => this.mutate((store) => {
-      if (from >= to) return 0;
-      const pending = store.plans.filter((item) => item.level === 'day' && item.period === from && !['completed', 'cancelled'].includes(item.status));
+    rollOverOverdueDayPlans: (to: ISODate) => this.mutate((store) => {
+      // 补齐语义：所有已过周期（period < to）的未完成日计划一次结转，隔多天未打开也不会漏
+      const pending = store.plans.filter((item) => item.level === 'day' && item.period < to && !['completed', 'cancelled'].includes(item.status));
       const nextOrder = store.plans.filter((item) => item.level === 'day' && item.period === to).length;
       pending.forEach((plan, index) => this.touch(plan, { period: to, order: nextOrder + index }));
       return pending.length;

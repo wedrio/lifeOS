@@ -1,9 +1,9 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Checkbox, Empty, Popconfirm, Progress, Segmented, Skeleton, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Card, Checkbox, Empty, Modal, Popconfirm, Progress, Segmented, Skeleton, Space, Switch, Tag, Tooltip, Typography, message } from 'antd';
 import { CaretDownOutlined, CaretRightOutlined, DeleteOutlined, DownOutlined, EditOutlined, ForwardOutlined, LeftOutlined, PlusOutlined, RightOutlined, UpOutlined } from '@ant-design/icons';
 import type { Plan, PlanLevel, PlanStatus } from '@lifeos/shared';
 import { dataSource, generateDisciplineDemoData } from '../data';
-import { addDays, defaultPeriod, isPlanOverdue, periodInputType, periodLabel, shiftPlanPeriod, today } from '../lib/dates';
+import { defaultPeriod, isPlanOverdue, periodInputType, periodLabel, shiftPlanPeriod, today } from '../lib/dates';
 import { PlanFormModal } from '../components/discipline/PlanFormModal';
 import { fireCelebrationCannon, fireConfetti, SpotlightCard } from '../components/ui';
 import '../styles/discipline.css';
@@ -26,16 +26,14 @@ export function PlansPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Plan | undefined>();
   const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(new Set());
+  /** 结转确认弹窗：同一自然日最多询问一次 */
+  const askedRolloverRef = useRef('');
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const settings = await dataSource.settings.get();
       setAutoRollOver(settings.autoRollOverIncompletePlans);
-      if (viewMode === 'day' && period === today() && settings.autoRollOverIncompletePlans) {
-        const moved = await dataSource.plans.rollOverIncompleteDayPlans(addDays(today(), -1), today());
-        if (moved > 0) message.info(`已自动结转 ${moved} 项昨日未完成计划`);
-      }
       const all = await dataSource.plans.list({ includeCompleted: true });
       const visible = viewMode === 'overdue' ? all : await dataSource.plans.list({ level: viewMode, period, includeCompleted: true });
       setPlans(visible);
@@ -44,6 +42,25 @@ export function PlansPage() {
     finally { setLoading(false); }
   }, [viewMode, period]);
   useEffect(() => { void reload(); }, [reload]);
+
+  // 确认式结转：进入今天的日视图时若有过期日计划，弹窗询问一次性补齐（同一自然日最多一次）
+  useEffect(() => {
+    if (viewMode !== 'day' || period !== today() || !autoRollOver || askedRolloverRef.current === today()) return;
+    const overdueCount = allPlans.filter((item) => item.level === 'day' && item.period < today() && !['completed', 'cancelled'].includes(item.status)).length;
+    if (overdueCount === 0) return;
+    askedRolloverRef.current = today();
+    Modal.confirm({
+      title: '补齐结转未完成日计划',
+      content: `有 ${overdueCount} 项过去周期的日计划未完成，是否全部结转到今天？取消后可在「逾期」视图中逐项处理。`,
+      okText: '结转到今天',
+      cancelText: '先不了',
+      onOk: async () => {
+        const moved = await dataSource.plans.rollOverOverdueDayPlans(today());
+        message.success(`已结转 ${moved} 项日计划到今天`);
+        await reload();
+      },
+    });
+  }, [viewMode, period, autoRollOver, allPlans, reload]);
 
   const parentById = useMemo(() => new Map(allPlans.map((plan) => [plan.id, plan])), [allPlans]);
   /** 各计划的后代总数（含子、孙……），用于删除级联确认提示 */
