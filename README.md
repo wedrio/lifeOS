@@ -58,6 +58,7 @@ pnpm build
 ## 第二阶段 B：真实数据源接入
 
 - 🚧 **B1 后端骨架已准备** — `apps/api` 提供 Fastify 5、统一错误包络、JWT + 刷新令牌认证服务、Prisma 身份持久化端口与 PostgreSQL 数据模型；业务资源 API 与 `RemoteDataSource` 将在后续项逐步接入。
+- ✅ **C1：Windows 桌面外壳（初版）已完成** — `apps/desktop` 基于 Tauri 2：托盘（关闭隐藏到托盘、托盘退出）、全局快捷键 `Ctrl+Shift+L` 唤起窗口、原生通知、系统对话框选图/另存（对应 PlatformCapabilities 桌面实现）。
 
 ### 启动本地 API 骨架
 

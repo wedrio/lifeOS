@@ -2,15 +2,18 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { AppRoutes } from './routes';
 import { useUIStore } from './stores/uiStore';
 import { dataSource } from './data';
+import { startHabitReminderScheduler } from './lib/reminders';
 import './styles/global.css';
 
 function Application() {
   const theme = useUIStore((state) => state.theme);
   const setTheme = useUIStore((state) => state.setTheme);
+
+  useEffect(() => startHabitReminderScheduler(), []);
 
   useEffect(() => {
     void dataSource.settings.get().then((settings) => {
@@ -106,9 +109,9 @@ function Application() {
           : undefined,
       }}
     >
-      <BrowserRouter>
+      <HashRouter>
         <AppRoutes />
-      </BrowserRouter>
+      </HashRouter>
     </ConfigProvider>
   );
 }

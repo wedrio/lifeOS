@@ -22,12 +22,13 @@ import { ClearOutlined, DownloadOutlined, InboxOutlined, SaveOutlined } from '@a
 import type { BackupImportMode, BackupPayload, Settings, SettingsInput } from '@lifeos/shared';
 import { settingsInputSchema } from '@lifeos/shared';
 import { dataSource } from '../data';
+import { fromCents, toCents } from '../lib/finance';
 import { useUIStore, type ParticleDensity } from '../stores/uiStore';
-import { webCapabilities } from '../platform/webCapabilities';
+import { getPlatformCapabilities } from '../platform';
 import { SpotlightCard } from '../components/ui';
 import '../styles/settings.css';
 
-type SettingsFormValues = SettingsInput;
+type SettingsFormValues = Omit<SettingsInput, 'mealBudget'> & { mealBudget?: { breakfast: number; lunch: number; dinner: number } };
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -49,7 +50,14 @@ export function SettingsPage() {
     try {
       const nextSettings = await dataSource.settings.get();
       setSettings(nextSettings);
-      form.setFieldsValue(nextSettings);
+      form.setFieldsValue({
+        ...nextSettings,
+        mealBudget: {
+          breakfast: fromCents(nextSettings.mealBudget?.breakfast ?? 0),
+          lunch: fromCents(nextSettings.mealBudget?.lunch ?? 0),
+          dinner: fromCents(nextSettings.mealBudget?.dinner ?? 0),
+        },
+      });
     } catch (error) {
       message.error(error instanceof Error ? error.message : '设置加载失败');
     } finally {
@@ -62,11 +70,14 @@ export function SettingsPage() {
   }, [load]);
 
   const saveSettings = async (values: SettingsFormValues) => {
-    const result = settingsInputSchema.safeParse(values);
+    const mealBudget = values.mealBudget && Object.values(values.mealBudget).some((amount) => amount > 0)
+      ? { breakfast: toCents(values.mealBudget.breakfast || 0), lunch: toCents(values.mealBudget.lunch || 0), dinner: toCents(values.mealBudget.dinner || 0) }
+      : undefined;
+    const result = settingsInputSchema.safeParse({ ...values, mealBudget });
     if (!result.success) return message.error(result.error.issues[0]?.message ?? '请检查设置');
     setSaving(true);
     try {
-      const saved = await dataSource.settings.update(result.data);
+      const saved = await dataSource.settings.update(Object.fromEntries(Object.entries(result.data).filter(([, value]) => value !== undefined)));
       setSettings(saved);
       const appliedTheme = saved.theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : saved.theme;
       setTheme(appliedTheme);
@@ -82,7 +93,7 @@ export function SettingsPage() {
     try {
       const backup = await dataSource.backup.exportData();
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
-      await webCapabilities.saveFile(`lifeos-backup-${backup.exportedAt.slice(0, 10)}.json`, blob);
+      await getPlatformCapabilities().saveFile(`lifeos-backup-${backup.exportedAt.slice(0, 10)}.json`, blob);
       message.success('备份文件已导出');
     } catch (error) {
       message.error(error instanceof Error ? error.message : '导出失败');
@@ -190,6 +201,13 @@ export function SettingsPage() {
                   进入今天的计划时，自动结转昨天未完成的日计划
                 </Typography.Text>
               </Form.Item>
+
+              <Typography.Title level={5} style={{ marginBottom: 12 }}>餐费预算 <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>每日三餐额度（元），0 表示未启用；记到「早餐/午餐/晚餐」分类的账单会自动对比额度</Typography.Text></Typography.Title>
+              <Row gutter={12}>
+                <Col span={8}><Form.Item name={['mealBudget', 'breakfast']} label="🥟 早餐 / 天"><InputNumber min={0} precision={2} prefix="¥" style={{ width: '100%' }} /></Form.Item></Col>
+                <Col span={8}><Form.Item name={['mealBudget', 'lunch']} label="🍚 午餐 / 天"><InputNumber min={0} precision={2} prefix="¥" style={{ width: '100%' }} /></Form.Item></Col>
+                <Col span={8}><Form.Item name={['mealBudget', 'dinner']} label="🍽️ 晚餐 / 天"><InputNumber min={0} precision={2} prefix="¥" style={{ width: '100%' }} /></Form.Item></Col>
+              </Row>
 
               <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
                 保存偏好

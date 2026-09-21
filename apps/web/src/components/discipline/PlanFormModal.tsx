@@ -24,6 +24,8 @@ export function PlanFormModal({ plan, plans, defaultLevel, defaultPlanPeriod, op
   const level = Form.useWatch('level', form) ?? plan?.level ?? defaultLevel;
   const status = Form.useWatch('status', form) ?? plan?.status ?? 'not_started';
   const progress = Form.useWatch('progress', form) ?? plan?.progress ?? 0;
+  const childCount = plan ? plans.filter((item) => item.parentId === plan.id).length : 0;
+  const isParent = childCount > 0;
   const parentOptions = plans.filter((item) => item.id !== plan?.id && levelOrder[item.level] < levelOrder[level]).map((item) => ({ value: item.id, label: `${levelName[item.level]} · ${item.title}` }));
 
   useEffect(() => {
@@ -59,8 +61,8 @@ export function PlanFormModal({ plan, plans, defaultLevel, defaultPlanPeriod, op
       <Form.Item name="description" label="描述（可选）"><Input.TextArea rows={3} maxLength={5000} showCount placeholder="写下这个计划的意义或完成标准" /></Form.Item>
       <div className="form-two-columns"><Form.Item name="level" label="计划层级" rules={[{ required: true }]}><Segmented block options={[{ label: '年', value: 'year' }, { label: '月', value: 'month' }, { label: '周', value: 'week' }, { label: '日', value: 'day' }]} onChange={(next) => form.setFieldValue('period', defaultPeriod(next as PlanLevel))} /></Form.Item><Form.Item name="period" label="所属周期" rules={[{ required: true, message: '请选择所属周期' }]}><Input type={periodInputType(level)} /></Form.Item></div>
       {level !== 'year' && <Form.Item name="parentId" label="关联上级（可选）"><Select allowClear showSearch optionFilterProp="label" placeholder="不关联上级计划" options={parentOptions} /></Form.Item>}
-      <div className="form-two-columns"><Form.Item name="priority" label="优先级" rules={[{ required: true }]}><Segmented block options={[{ label: '低', value: 'low' }, { label: '中', value: 'medium' }, { label: '高', value: 'high' }]} /></Form.Item><Form.Item name="status" label="状态" rules={[{ required: true }]}><Select options={[{ label: '待开始', value: 'not_started' }, { label: '进行中', value: 'in_progress' }, { label: '已完成', value: 'completed' }, { label: '已取消', value: 'cancelled' }]} onChange={(next) => { if (next === 'completed') form.setFieldValue('progress', 100); }} /></Form.Item></div>
-      <Form.Item name="progress" label={`进度 ${status === 'completed' ? '（已完成）' : ''}`} rules={[{ required: true }]}><InputNumber min={0} max={100} precision={0} suffix="%" style={{ width: '100%' }} /></Form.Item>
+      <div className="form-two-columns"><Form.Item name="priority" label="优先级" rules={[{ required: true }]}><Segmented block options={[{ label: '低', value: 'low' }, { label: '中', value: 'medium' }, { label: '高', value: 'high' }]} /></Form.Item><Form.Item name="status" label="状态" rules={[{ required: true }]}><Select disabled={isParent} options={[{ label: '待开始', value: 'not_started' }, { label: '进行中', value: 'in_progress' }, { label: '已完成', value: 'completed' }, { label: '已取消', value: 'cancelled' }]} onChange={(next) => { if (next === 'completed') form.setFieldValue('progress', 100); }} /></Form.Item></div>
+      <Form.Item name="progress" label={`进度 ${status === 'completed' ? '（已完成）' : ''}`} rules={[{ required: true }]} extra={isParent ? `包含 ${childCount} 个子计划，进度与状态由子计划自动汇总` : undefined}><InputNumber disabled={isParent} min={0} max={100} precision={0} suffix="%" style={{ width: '100%' }} /></Form.Item>
       <Progress percent={Math.min(100, progress)} showInfo={false} strokeColor="#2f9c67" />
       <div className="modal-footer" style={{ marginTop: 24 }}><Button onClick={onClose}>取消</Button><Button type="primary" htmlType="submit">保存计划</Button></div>
     </Form>

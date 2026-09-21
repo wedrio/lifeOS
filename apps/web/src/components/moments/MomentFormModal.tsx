@@ -5,7 +5,7 @@ import type { EntityLink, Moment, MomentInput } from '@lifeos/shared';
 import { momentInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { optimizeImageForLocalStorage } from '../../lib/images';
-import { webCapabilities } from '../../platform/webCapabilities';
+import { getPlatformCapabilities } from '../../platform';
 
 export interface MomentLinkOption { value: string; label: string; }
 interface MomentFormValues { content: string; mood?: string; weather?: string; location?: string; tags?: string; links?: string[]; }
@@ -28,7 +28,7 @@ export function MomentFormModal({ moment, linkOptions, open, onClose, onSaved }:
     const remaining = 9 - images.length;
     if (remaining <= 0) return message.warning('一条日常最多上传 9 张图片');
     try {
-      const files = await webCapabilities.pickImages(remaining);
+      const files = await getPlatformCapabilities().pickImages(remaining);
       if (!files.length) return;
       setImageLoading(true);
       const optimized = await Promise.all(files.map(optimizeImageForLocalStorage));

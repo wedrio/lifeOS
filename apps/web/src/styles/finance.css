@@ -3,6 +3,14 @@
 .finance-date-filter { width: 140px; }
 .finance-summary-label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 12px; font-weight: 650; letter-spacing: .25px; }
 .transaction-amount { font-weight: 750; font-variant-numeric: tabular-nums; }
+.transaction-repayment { color: #5b8ff9; font-weight: 750; font-variant-numeric: tabular-nums; }
+.meal-budget-rows { display: grid; gap: 12px; }
+.meal-budget-row { display: flex; align-items: center; gap: 14px; }
+.meal-budget-label { flex: 0 0 auto; min-width: 68px; font-weight: 650; }
+.meal-budget-amount { flex: 0 0 auto; font-size: 13px; font-weight: 700; }
+.meal-budget-spent { flex: 0 0 auto; font-size: 12px; font-variant-numeric: tabular-nums; }
+.meal-budget-summary { display: flex; gap: 8px; margin-top: 14px; }
+@media (max-width: 575px) { .meal-budget-row { flex-wrap: wrap; gap: 8px; } .meal-budget-amount { margin-left: auto; } }
 .transaction-amount.expense { color: #db5161; }
 .transaction-amount.income { color: #23936d; }
 .category-manager-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }

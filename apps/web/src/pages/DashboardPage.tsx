@@ -9,16 +9,23 @@ import {
   ReadOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import type { DashboardStats, Plan } from '@lifeos/shared';
+import type { DashboardStats, MealBudget, Plan, Settings } from '@lifeos/shared';
 import { useNavigate } from 'react-router-dom';
 import { dataSource, generateAllDemoData } from '../data';
-import { addDays, today } from '../lib/dates';
+import { formatCents } from '../lib/finance';
 import { BookCover } from '../components/reading/BookCover';
 import { CountUp, fireCelebrationCannon, fireConfetti, ShinyText, SpotlightCard, TiltedCard } from '../components/ui';
 import '../styles/dashboard.css';
 
+const MEAL_DASHBOARD_ITEMS: Array<{ key: keyof MealBudget; label: string; icon: string }> = [
+  { key: 'breakfast', label: '早餐', icon: '🥟' },
+  { key: 'lunch', label: '午餐', icon: '🍚' },
+  { key: 'dinner', label: '晚餐', icon: '🍽️' },
+];
+
 export function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const navigate = useNavigate();
@@ -27,11 +34,9 @@ export function DashboardPage() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const settings = await dataSource.settings.get();
-      if (settings.autoRollOverIncompletePlans) {
-        await dataSource.plans.rollOverIncompleteDayPlans(addDays(today(), -1), today());
-      }
-      setStats(await dataSource.stats.dashboard());
+      const [nextStats, nextSettings] = await Promise.all([dataSource.stats.dashboard(), dataSource.settings.get()]);
+      setStats(nextStats);
+      setSettings(nextSettings);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '主面板加载失败');
     } finally {
@@ -188,6 +193,39 @@ export function DashboardPage() {
           </MetricCard>
         </Col>
       </Row>
+
+      {settings && settings.mealBudget && Object.values(settings.mealBudget).some((amount) => amount > 0) && stats?.finance.meal && (
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+          <Col xs={24}>
+            <Card
+              title="今日餐费"
+              extra={<Button type="link" onClick={() => navigate('/finance/budget')}>查看预算</Button>}
+            >
+              <div className="meal-budget-rows">
+                {MEAL_DASHBOARD_ITEMS.map(({ key, label, icon }) => {
+                  const dailyBudget = settings.mealBudget[key];
+                  const spentToday = stats.finance.meal[key];
+                  const left = dailyBudget - spentToday;
+                  return (
+                    <div className="meal-budget-row" key={key}>
+                      <span className="meal-budget-label">{icon} {label}</span>
+                      <Progress percent={dailyBudget > 0 ? Math.min(100, Math.round((spentToday / dailyBudget) * 100)) : 0} size="small" showInfo={false} strokeColor={left < 0 ? '#db5161' : '#2f9c67'} style={{ flex: 1, margin: 0 }} />
+                      <span className="meal-budget-amount" style={{ color: left < 0 ? '#db5161' : '#23936d' }}>
+                        {dailyBudget === 0 ? '未设额度' : left >= 0 ? `还剩 ${formatCents(left)}` : `超支 ${formatCents(-left)}`}
+                      </span>
+                      <Typography.Text type="secondary" className="meal-budget-spent">{formatCents(spentToday)} / {formatCents(dailyBudget)}</Typography.Text>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="meal-budget-summary">
+                <Tag color={stats.finance.meal.monthSaved > 0 ? 'green' : 'default'}>本月已节约 {formatCents(stats.finance.meal.monthSaved)}</Tag>
+                <Tag color={stats.finance.meal.monthOverspent > 0 ? 'red' : 'default'}>本月已超支 {formatCents(stats.finance.meal.monthOverspent)}</Tag>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={15}>

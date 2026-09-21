@@ -13,6 +13,7 @@ import type {
   BookNoteInput,
   Budget,
   BudgetInput,
+  MealBudgetStats,
   Category,
   CategoryInput,
   DataSource,
@@ -24,6 +25,8 @@ import type {
   MomentFilter,
   MomentInput,
   Plan,
+  PlanLevel,
+  PlanStatus,
   PlanFilter,
   PlanInput,
   ReadingLog,
@@ -34,6 +37,7 @@ import type {
   TransactionFilter,
   TransactionInput,
 } from '@lifeos/shared';
+import { isHabitDue, today as localToday } from '../../lib/dates';
 
 const STORAGE_KEY = 'lifeos:mock-data:v1';
 const USER_ID = 'mock-user';
@@ -55,7 +59,7 @@ interface MockStore {
 }
 
 const timestamp = () => new Date().toISOString();
-const dateToday = (): ISODate => new Date().toISOString().slice(0, 10);
+const dateToday = (): ISODate => localToday();
 const monthToday = () => dateToday().slice(0, 7);
 const yearToday = () => Number(dateToday().slice(0, 4));
 const id = () => globalThis.crypto?.randomUUID?.() ?? `mock-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -73,7 +77,8 @@ function systemEntity<T extends object>(entityId: string, value: T): T & BaseEnt
 
 function defaultCategories(): Category[] {
   const expense = [
-    ['dining', '餐饮', '🍜', '#f08c53'], ['transport', '交通', '🚇', '#5d9cec'],
+    ['dining', '餐饮', '🍜', '#f08c53'], ['breakfast', '早餐', '🥟', '#f0a44a'], ['lunch', '午餐', '🍚', '#e8a838'], ['dinner', '晚餐', '🍽️', '#d97742'],
+    ['transport', '交通', '🚇', '#5d9cec'],
     ['shopping', '购物', '🛍️', '#dd6b9a'], ['housing', '居住', '🏠', '#8a6fdf'],
     ['entertainment', '娱乐', '🎮', '#a86bdb'], ['medical', '医疗', '💊', '#e67373'],
     ['learning', '学习', '📚', '#5ab99a'], ['social', '人情', '🎁', '#d79463'],
@@ -95,6 +100,7 @@ function defaultAccounts(): Account[] {
     systemEntity('account-alipay', { name: '支付宝', icon: '🔵', initialBalance: 0, archived: false }),
     systemEntity('account-wechat', { name: '微信', icon: '🟢', initialBalance: 0, archived: false }),
     systemEntity('account-bank', { name: '银行卡', icon: '💳', initialBalance: 0, archived: false }),
+    systemEntity('account-huabei', { name: '花呗', icon: '💠', initialBalance: 0, archived: false, kind: 'credit' as const }),
   ];
 }
 
@@ -123,8 +129,23 @@ function initialStore(): MockStore {
       weekStartsOn: 1,
       autoRollOverIncompletePlans: true,
       annualReadingTarget: 12,
+      makeupCardBalance: 2,
+      makeupCardMonth: now.slice(0, 7),
+      mealBudget: { breakfast: 0, lunch: 0, dinner: 0 },
     },
   };
+}
+
+const MAKEUP_CARDS_PER_MONTH = 2;
+
+/** 补签卡按月发放（每月 2 张，不累积）；旧数据缺字段时在此兜底 */
+function ensureMakeupCards(store: MockStore): number {
+  const month = monthToday();
+  if (store.settings.makeupCardMonth !== month || typeof store.settings.makeupCardBalance !== 'number') {
+    store.settings.makeupCardMonth = month;
+    store.settings.makeupCardBalance = MAKEUP_CARDS_PER_MONTH;
+  }
+  return store.settings.makeupCardBalance;
 }
 
 /** Brings the empty A0 localStorage shape forward without overwriting user finance data. */
@@ -149,6 +170,24 @@ function migrateStore(store: MockStore): boolean {
   }
   if (!store.settings.annualReadingTarget) {
     store.settings.annualReadingTarget = 12;
+    changed = true;
+  }
+  // v2.12：旧数据补齐餐次分类、内置花呗信用账户与每日餐费额度（幂等，不覆盖用户数据）
+  const mealCategories = [
+    ['category-breakfast', '早餐', '🥟', '#f0a44a'], ['category-lunch', '午餐', '🍚', '#e8a838'], ['category-dinner', '晚餐', '🍽️', '#d97742'],
+  ] as const;
+  mealCategories.forEach(([id, name, icon, color]) => {
+    if (!store.categories.some((item) => item.id === id)) {
+      store.categories.push(systemEntity(id, { name, icon, color, type: 'expense' as const, isSystem: true }));
+      changed = true;
+    }
+  });
+  if (!store.accounts.some((item) => item.id === 'account-huabei')) {
+    store.accounts.push(systemEntity('account-huabei', { name: '花呗', icon: '💠', initialBalance: 0, archived: false, kind: 'credit' as const }));
+    changed = true;
+  }
+  if (!store.settings.mealBudget) {
+    store.settings.mealBudget = { breakfast: 0, lunch: 0, dinner: 0 };
     changed = true;
   }
   if (!Array.isArray(store.books)) {
@@ -207,7 +246,8 @@ function demoDisciplineStore(store: MockStore): number {
   const habits: Habit[] = [
     { ...base(), id: 'demo-habit-read', name: '阅读 30 分钟', icon: '📚', color: '#5b5ce2', frequency: 'daily', timesPerPeriod: 1, reminderTime: '21:00', allowBackfillDays: 2, archived: false },
     { ...base(), id: 'demo-habit-exercise', name: '运动', icon: '🏃', color: '#e76f8a', frequency: 'weekly', timesPerPeriod: 3, reminderTime: '18:30', allowBackfillDays: 1, archived: false },
-    { ...base(), id: 'demo-habit-water', name: '喝够水', icon: '💧', color: '#53a8ff', frequency: 'daily', timesPerPeriod: 1, allowBackfillDays: 0, archived: false },
+    { ...base(), id: 'demo-habit-water', name: '喝够水（每日 3 次）', icon: '💧', color: '#53a8ff', frequency: 'daily', timesPerPeriod: 3, allowBackfillDays: 0, archived: false },
+    { ...base(), id: 'demo-habit-stretch', name: '颈部拉伸', icon: '🧘', color: '#2f9c67', frequency: 'custom', timesPerPeriod: 1, weekdays: [1, 3, 5], allowBackfillDays: 0, archived: false },
   ];
   const reference = dateToday();
   const checkIns: HabitCheckIn[] = [];
@@ -215,14 +255,15 @@ function demoDisciplineStore(store: MockStore): number {
     const date = shiftDate(reference, -offset);
     if (offset % 9 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-read', date });
     if (offset % 2 === 0 || offset % 5 === 0) checkIns.push({ ...base(), habitId: 'demo-habit-exercise', date });
-    if (offset % 6 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-water', date });
+    if (offset % 6 !== 0) checkIns.push({ ...base(), habitId: 'demo-habit-water', date, count: (offset % 3) + 1 });
+    if ([1, 3, 5].includes(new Date(`${date}T12:00:00Z`).getUTCDay() || 7) && offset % 7 !== 3) checkIns.push({ ...base(), habitId: 'demo-habit-stretch', date });
   }
   const year = reference.slice(0, 4);
   const month = reference.slice(0, 7);
   const plans: Plan[] = [
-    { ...base(), id: 'demo-plan-year', title: '成为更有能量的自己', description: '建立稳定的学习、运动与休息节奏。', level: 'year', period: year, status: 'in_progress', progress: 55, priority: 'high', order: 0 },
-    { ...base(), id: 'demo-plan-month', title: '九月习惯养成', description: '完成阅读与运动目标。', level: 'month', period: month, parentId: 'demo-plan-year', status: 'in_progress', progress: 62, priority: 'high', order: 0 },
-    { ...base(), id: 'demo-plan-week', title: '本周复盘与训练', level: 'week', period: currentWeekPeriod(reference), parentId: 'demo-plan-month', status: 'in_progress', progress: 50, priority: 'medium', order: 0 },
+    { ...base(), id: 'demo-plan-year', title: '成为更有能量的自己', description: '建立稳定的学习、运动与休息节奏。', level: 'year', period: year, status: 'in_progress', progress: 20, priority: 'high', order: 0 },
+    { ...base(), id: 'demo-plan-month', title: '九月习惯养成', description: '完成阅读与运动目标。', level: 'month', period: month, parentId: 'demo-plan-year', status: 'in_progress', progress: 20, priority: 'high', order: 0 },
+    { ...base(), id: 'demo-plan-week', title: '本周复盘与训练', level: 'week', period: currentWeekPeriod(reference), parentId: 'demo-plan-month', status: 'in_progress', progress: 20, priority: 'medium', order: 0 },
     { ...base(), id: 'demo-plan-day-1', title: '完成 30 分钟阅读', level: 'day', period: reference, parentId: 'demo-plan-week', status: 'not_started', progress: 0, priority: 'high', order: 0 },
     { ...base(), id: 'demo-plan-day-2', title: '下班后慢跑 3 公里', level: 'day', period: reference, parentId: 'demo-plan-week', status: 'in_progress', progress: 40, priority: 'medium', order: 1 },
   ];
@@ -466,6 +507,22 @@ export class MockDataSource implements DataSource {
     return Object.assign(entity, patch, { updatedAt: timestamp() }) as T;
   }
 
+  /** 父计划进度自动汇总：叶子计划手动维护；父计划由未取消直接子计划进度平均（四舍五入）计算，
+   *  状态随进度派生（100→completed，>0→in_progress，0→not_started）；已取消计划不参与也不被改写。
+   *  按层级自底向上全量重算，覆盖增删改与级联勾选的所有路径。 */
+  private recalcAllPlanProgress(store: MockStore) {
+    const levelDepth: Record<PlanLevel, number> = { day: 0, week: 1, month: 2, year: 3 };
+    [...store.plans]
+      .sort((a, b) => levelDepth[a.level] - levelDepth[b.level])
+      .forEach((plan) => {
+        if (plan.status === 'cancelled') return;
+        const children = store.plans.filter((item) => item.parentId === plan.id && item.status !== 'cancelled');
+        if (children.length === 0) return;
+        const progress = Math.round(children.reduce((sum, item) => sum + item.progress, 0) / children.length);
+        this.touch(plan, { progress, status: (progress >= 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started') as PlanStatus });
+      });
+  }
+
   async generateDemoData(): Promise<number> {
     return this.mutate((store) => {
       if (store.transactions.length > 0) return 0;
@@ -525,7 +582,7 @@ export class MockDataSource implements DataSource {
       store.habits = store.habits.filter((item) => item.id !== habitId);
       store.habitCheckIns = store.habitCheckIns.filter((item) => item.habitId !== habitId);
     }),
-    checkIn: (habitId: string, date: ISODate, note?: string) => this.mutate((store) => {
+    checkIn: (habitId: string, date: ISODate, note?: string, options?: { useMakeupCard?: boolean }) => this.mutate((store) => {
       const habit = store.habits.find((item) => item.id === habitId);
       if (!habit) throw new Error('未找到该习惯');
       if (habit.archived) throw new Error('已归档习惯不能打卡');
@@ -535,15 +592,58 @@ export class MockDataSource implements DataSource {
       if (!Number.isFinite(targetTime)) throw new Error('日期格式应为 YYYY-MM-DD');
       if (targetTime > todayTime) throw new Error('不能为未来日期打卡');
       const daysAgo = Math.round((todayTime - targetTime) / 86_400_000);
-      if (daysAgo > habit.allowBackfillDays) throw new Error(`仅允许补打最近 ${habit.allowBackfillDays} 天`);
+      if (daysAgo > habit.allowBackfillDays) {
+        // 超出补打窗口：消耗 1 张补签卡（每月发放、不累积、取消不返还）
+        const balance = ensureMakeupCards(store);
+        if (!options?.useMakeupCard) {
+          throw new Error('超出允许补打天数，可使用 1 张补签卡补打');
+        }
+        if (balance <= 0) throw new Error('本月补签卡已用完，下月再来');
+        store.settings.makeupCardBalance = balance - 1;
+      }
+      const dailyTarget = habit.frequency === 'daily' ? habit.timesPerPeriod : 1;
       const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
-      if (existing) return existing;
-      const entity: HabitCheckIn = { ...base(), habitId, date, ...(note ? { note } : {}) };
+      if (existing) {
+        if (existing.state === 'skip') {
+          // 休息日直接打卡 = 转为完成
+          delete existing.state;
+          return this.touch(existing, { count: 1 });
+        }
+        const count = existing.count ?? 1;
+        if (count >= dailyTarget) throw new Error('今日目标次数已完成，再点将逐次取消打卡');
+        return this.touch(existing, { count: count + 1 });
+      }
+      const entity: HabitCheckIn = { ...base(), habitId, date, count: 1, ...(note ? { note } : {}) };
       store.habitCheckIns.push(entity);
       return entity;
     }),
     uncheck: (habitId: string, date: ISODate) => this.mutate((store) => {
-      store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date));
+      const habit = store.habits.find((item) => item.id === habitId);
+      if (habit?.archived) throw new Error('已归档习惯不能修改打卡');
+      const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
+      if (!existing) return;
+      if (existing.state === 'skip') {
+        store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date));
+        return;
+      }
+      const count = existing.count ?? 1;
+      if (count > 1) this.touch(existing, { count: count - 1 });
+      else store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date));
+    }),
+    skipDay: (habitId: string, date: ISODate) => this.mutate((store) => {
+      const habit = store.habits.find((item) => item.id === habitId);
+      if (!habit) throw new Error('未找到该习惯');
+      if (habit.archived) throw new Error('已归档习惯不能修改打卡');
+      const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
+      if (existing?.state === 'skip') return existing;
+      if (existing && (existing.count ?? 1) > 0) throw new Error('今日已完成，无需休息');
+      if (existing) return this.touch(existing, { state: 'skip' as const });
+      const entity: HabitCheckIn = { ...base(), habitId, date, count: 0, state: 'skip' };
+      store.habitCheckIns.push(entity);
+      return entity;
+    }),
+    unskipDay: (habitId: string, date: ISODate) => this.mutate((store) => {
+      store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date && item.state === 'skip'));
     }),
     listCheckIns: (habitId: string, from: ISODate, to: ISODate) => this.query((store) =>
       store.habitCheckIns.filter((item) => item.habitId === habitId && item.date >= from && item.date <= to),
@@ -561,15 +661,43 @@ export class MockDataSource implements DataSource {
       const nextOrder = input.order ?? store.plans.filter((item) => item.period === input.period).length;
       const entity: Plan = { ...base(), ...input, order: nextOrder };
       store.plans.push(entity);
+      this.recalcAllPlanProgress(store);
       return entity;
     }),
     update: (planId: string, patch: Partial<PlanInput>) => this.mutate((store) => {
       const entity = store.plans.find((item) => item.id === planId);
       if (!entity) throw new Error('未找到该计划');
-      return this.touch(entity, patch);
+      this.touch(entity, patch);
+      // 父计划勾选/取消级联到后代：勾选完成全部未取消后代；取消勾选仅回退已完成后代（进行中的保持不变）
+      if (patch.status === 'completed' || patch.status === 'not_started') {
+        const cascade = (parentId: string) => {
+          store.plans.filter((item) => item.parentId === parentId && item.status !== 'cancelled').forEach((child) => {
+            if (patch.status === 'completed') {
+              if (child.status !== 'completed') this.touch(child, { status: 'completed', progress: 100 });
+            } else if (child.status === 'completed') {
+              this.touch(child, { status: 'not_started', progress: 0 });
+            }
+            cascade(child.id);
+          });
+        };
+        cascade(entity.id);
+      }
+      // 父计划的 progress/status 以子计划汇总结果为准（覆盖手动值）
+      this.recalcAllPlanProgress(store);
+      return entity;
     }),
     remove: (planId: string) => this.mutate((store) => {
-      store.plans = store.plans.filter((item) => item.id !== planId && item.parentId !== planId);
+      // 级联删除：递归收集全部后代（子、孙……）一并移除，避免孤儿节点
+      const doomed = new Set<string>([planId]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        store.plans.forEach((item) => {
+          if (item.parentId && doomed.has(item.parentId) && !doomed.has(item.id)) { doomed.add(item.id); grew = true; }
+        });
+      }
+      store.plans = store.plans.filter((item) => !doomed.has(item.id));
+      this.recalcAllPlanProgress(store);
     }),
     reorder: (ids: string[]) => this.mutate((store) => {
       ids.forEach((planId, order) => {
@@ -577,9 +705,9 @@ export class MockDataSource implements DataSource {
         if (entity) this.touch(entity, { order });
       });
     }),
-    rollOverIncompleteDayPlans: (from: ISODate, to: ISODate) => this.mutate((store) => {
-      if (from >= to) return 0;
-      const pending = store.plans.filter((item) => item.level === 'day' && item.period === from && !['completed', 'cancelled'].includes(item.status));
+    rollOverOverdueDayPlans: (to: ISODate) => this.mutate((store) => {
+      // 补齐语义：所有已过周期（period < to）的未完成日计划一次结转，隔多天未打开也不会漏
+      const pending = store.plans.filter((item) => item.level === 'day' && item.period < to && !['completed', 'cancelled'].includes(item.status));
       const nextOrder = store.plans.filter((item) => item.level === 'day' && item.period === to).length;
       pending.forEach((plan, index) => this.touch(plan, { period: to, order: nextOrder + index }));
       return pending.length;
@@ -754,7 +882,15 @@ export class MockDataSource implements DataSource {
   };
 
   settings = {
-    get: () => this.query((store) => store.settings),
+    get: () => this.query((store) => {
+      // 展示口径：跨月未使用时按「已重新发放」返回（持久化在下次 mutate 时落盘）
+      const settings = { ...store.settings };
+      if (settings.makeupCardMonth !== monthToday() || typeof settings.makeupCardBalance !== 'number') {
+        settings.makeupCardMonth = monthToday();
+        settings.makeupCardBalance = MAKEUP_CARDS_PER_MONTH;
+      }
+      return settings;
+    }),
     update: (patch: Partial<SettingsInput>) => this.mutate((store) => this.touch(store.settings, patch)),
   };
 
@@ -792,11 +928,27 @@ export class MockDataSource implements DataSource {
       const todayPlans = store.plans.filter((item) => item.level === 'day' && item.period === today).sort((a, b) => a.order - b.order);
       const overduePlans = store.plans.filter((item) => item.level === 'day' && item.period < today && !['completed', 'cancelled'].includes(item.status)).sort((a, b) => b.period.localeCompare(a.period) || a.order - b.order);
       const completedPlans = todayPlans.filter((item) => item.status === 'completed').length;
-      const completedHabits = store.habits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today)).length;
+      const activeHabits = store.habits.filter((item) => !item.archived);
+      // 今日打卡进度只统计「今天需要打卡」的习惯（custom 频率非调度日不计入分母）；休息日视为已安顿
+      const dueHabits = activeHabits.filter((habit) => isHabitDue(habit, today));
+      const completedHabits = dueHabits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today && (checkIn.state === 'skip' || (checkIn.count ?? 1) > 0))).length;
       const month = today.slice(0, 7);
       const year = today.slice(0, 4);
       const expenses = store.transactions.filter((item) => item.type === 'expense');
       const total = (items: Transaction[]) => items.reduce((sum, item) => sum + item.amount, 0);
+      // v2.12 餐费预算：三餐今日已花 + 本月累计节约/超支（额度×已过天数−实际，正为节约负为超支）
+      const mealBudget = store.settings.mealBudget ?? { breakfast: 0, lunch: 0, dinner: 0 };
+      const mealCategories: Record<'breakfast' | 'lunch' | 'dinner', string> = { breakfast: 'category-breakfast', lunch: 'category-lunch', dinner: 'category-dinner' };
+      const dayOfMonth = Number(today.slice(8));
+      const meal = { monthSaved: 0, monthOverspent: 0, breakfast: 0, lunch: 0, dinner: 0 } as MealBudgetStats;
+      (['breakfast', 'lunch', 'dinner'] as const).forEach((mealKey) => {
+        const categoryId = mealCategories[mealKey];
+        meal[mealKey] = total(expenses.filter((item) => item.date === today && item.categoryId === categoryId));
+        const budgetMonth = mealBudget[mealKey] * dayOfMonth;
+        const spentMonth = total(expenses.filter((item) => item.date.startsWith(month) && item.categoryId === categoryId));
+        const diff = budgetMonth - spentMonth;
+        if (diff > 0) meal.monthSaved += diff; else meal.monthOverspent += -diff;
+      });
       const currentBudget = store.budgets.find((item) => item.period === month);
       const daysUntil = (value: string) => Math.ceil((Date.parse(`${value}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
       const expiringAssets = store.assets
@@ -812,12 +964,13 @@ export class MockDataSource implements DataSource {
       return {
         today,
         plan: { completed: completedPlans, total: todayPlans.length },
-        habits: { completed: completedHabits, total: store.habits.filter((item) => !item.archived).length },
+        habits: { completed: completedHabits, total: dueHabits.length },
         finance: {
           todayExpense: total(expenses.filter((item) => item.date === today)),
           monthExpense: total(expenses.filter((item) => item.date.startsWith(month))),
           budget: currentBudget,
           budgetSpent: total(expenses.filter((item) => item.date.startsWith(month))),
+          meal,
         },
         expiringAssets,
         overduePlans,
@@ -843,7 +996,16 @@ export class MockDataSource implements DataSource {
         expense,
         balanceByAccount: store.accounts.map((account) => ({
           account,
-          balance: account.initialBalance + sum(store.transactions.filter((item) => item.accountId === account.id && item.type === 'income')) - sum(store.transactions.filter((item) => item.accountId === account.id && item.type === 'expense')),
+          // v2.12：还款使付款账户余额减少、目标信用账户欠款减少（余额 +amount）
+          balance: store.transactions.reduce((balance, item) => {
+            if (item.accountId === account.id) {
+              if (item.type === 'income') return balance + item.amount;
+              if (item.type === 'expense') return balance - item.amount;
+              if (item.type === 'repayment') return balance - item.amount;
+            }
+            if (item.type === 'repayment' && item.toAccountId === account.id) return balance + item.amount;
+            return balance;
+          }, account.initialBalance),
         })),
         expenseByCategory: store.categories.filter((category) => category.type === 'expense').map((category) => ({
           category,

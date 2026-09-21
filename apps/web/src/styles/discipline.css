@@ -17,15 +17,24 @@
 .habit-stat span { color: var(--muted); font-size: 11px; }
 .heatmap-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 17px; }
 .heatmap-grid-wrap { overflow-x: auto; padding: 5px 4px 9px; border-radius: 12px; background: rgba(255,255,255,.20); }
+.heatmap-months { display: grid; grid-auto-flow: column; grid-auto-columns: 13px; gap: 4px; width: max-content; margin-bottom: 3px; }
+.heatmap-month-label { grid-row: 1; white-space: nowrap; overflow: visible; font-size: 10px; line-height: 13px; color: var(--muted); }
 .heatmap-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 13px); grid-auto-columns: 13px; gap: 4px; width: max-content; }
 .heatmap-cell { width: 13px; height: 13px; padding: 0; border: 1px solid rgba(255,255,255,.55); border-radius: 4px; background: rgba(118,119,145,.12); cursor: pointer; transition: transform .15s ease, filter .15s ease; }
 .heatmap-cell:hover:not(:disabled) { outline: 2px solid color-mix(in srgb, var(--habit-color) 35%, transparent); outline-offset: 1px; transform: scale(1.16); }
-.heatmap-cell.checked { background: var(--habit-color); box-shadow: 0 2px 5px color-mix(in srgb, var(--habit-color) 35%, transparent); }
+.heatmap-cell.level-1 { background: color-mix(in srgb, var(--habit-color) 38%, transparent); }
+.heatmap-cell.level-2 { background: color-mix(in srgb, var(--habit-color) 68%, transparent); }
+.heatmap-cell.level-3 { background: var(--habit-color); box-shadow: 0 2px 5px color-mix(in srgb, var(--habit-color) 35%, transparent); }
+.heatmap-cell.skipped { background: color-mix(in srgb, #7c8aa5 55%, transparent); border-style: dashed; }
+.heatmap-cell.today { outline: 1.5px solid color-mix(in srgb, var(--habit-color) 75%, #faad14 25%); outline-offset: 1px; }
 .heatmap-cell.outside { visibility: hidden; cursor: default; }
 .heatmap-cell:disabled { cursor: not-allowed; }
 .heatmap-legend { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin-top: 8px; color: var(--muted); font-size: 11px; }
 .heatmap-legend i { width: 12px; height: 12px; border: 1px solid rgba(255,255,255,.5); border-radius: 4px; background: rgba(118,119,145,.12); }
-.heatmap-legend i:last-of-type { background: var(--habit-color); }
+.heatmap-legend i.level-1 { background: color-mix(in srgb, var(--habit-color) 38%, transparent); }
+.heatmap-legend i.level-2 { background: color-mix(in srgb, var(--habit-color) 68%, transparent); }
+.heatmap-legend i.level-3 { background: var(--habit-color); }
+.heatmap-legend-note { opacity: .8; }
 .plan-period-control { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 2px; border-radius: 12px; background: rgba(255,255,255,.22); }
 .plan-period-control .ant-input { width: 160px; text-align: center; }
 .plan-list { display: grid; gap: 10px; }
@@ -40,6 +49,15 @@
 .plan-item-meta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 10px; color: var(--muted); font-size: 12px; }
 .plan-item-progress { min-width: 90px; max-width: 180px; margin-top: 9px; }
 .plan-item-actions { display: flex; flex: 0 0 auto; }
+.plan-tree-toggle { flex: 0 0 auto; color: var(--muted); }
+.plan-tree-children { display: grid; gap: 10px; margin-top: 10px; position: relative; padding-left: 20px; }
+.plan-tree-children::before { content: ''; position: absolute; left: 7px; top: 4px; bottom: 14px; width: 2px; border-radius: 2px; background: rgba(47, 156, 103, .3); }
+[data-theme='dark'] .plan-tree-children::before { background: rgba(47, 156, 103, .45); }
+.plan-overdue-group-title { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.plan-review-stats { margin: 4px 0 2px; }
+.plan-review-card { display: grid; gap: 10px; padding: 15px; border: 1px solid rgba(255,255,255,.68); border-radius: 15px; background: rgba(255,255,255,.31); }
+[data-theme='dark'] .plan-review-card { background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.08); }
+.plan-review-priority { display: flex; align-items: center; gap: 10px; }
 .form-two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 [data-theme='dark'] .habit-card { border-color: rgba(255,255,255,.08) !important; }
@@ -52,4 +70,33 @@
 [data-theme='dark'] .plan-item { background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.08); box-shadow: none; }
 [data-theme='dark'] .plan-item:hover { background: rgba(255,255,255,.07); }
 
-@media (max-width: 575px) { .habit-stats { gap: 5px; } .habit-stat { padding: 9px 3px; } .habit-stat strong { font-size: 17px; } .heatmap-grid { grid-template-rows: repeat(7, 11px); grid-auto-columns: 11px; gap: 3px; } .heatmap-cell { width: 11px; height: 11px; } .plan-item { gap: 9px; padding: 12px; } .plan-item-actions { flex-direction: column; } .plan-period-control .ant-input { width: 128px; } }
+@media (max-width: 575px) { .habit-stats { gap: 5px; } .habit-stat { padding: 9px 3px; } .habit-stat strong { font-size: 17px; } .heatmap-months { grid-auto-columns: 11px; } .heatmap-grid { grid-template-rows: repeat(7, 11px); grid-auto-columns: 11px; gap: 3px; } .heatmap-cell { width: 11px; height: 11px; } .plan-item { gap: 9px; padding: 12px; } .plan-item-actions { flex-direction: column; } .plan-period-control .ant-input { width: 128px; } .plan-tree-children { gap: 8px; padding-left: 14px; } }
+
+/* ===== 习惯详情统计（月历 / 完成率曲线 / 里程碑徽章） ===== */
+.habit-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 26px; align-items: start; }
+.habit-detail-block { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.habit-month-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 280px; }
+.habit-month-calendar .calendar-head { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 0; }
+.calendar-cell { display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 8px; font-size: 12px; background: rgba(118,119,145,.10); color: var(--muted); border: 1px solid transparent; }
+.calendar-cell.done { background: color-mix(in srgb, var(--habit-color) 75%, transparent); color: #fff; font-weight: 600; }
+.calendar-cell.skipped { background: color-mix(in srgb, #7c8aa5 40%, transparent); border-style: dashed; color: inherit; }
+.calendar-cell.missed { background: rgba(118,119,145,.16); }
+.calendar-cell.idle, .calendar-cell.future, .calendar-cell.out-month { opacity: .4; }
+.calendar-cell.today { outline: 2px solid color-mix(in srgb, var(--habit-color) 75%, #faad14 25%); outline-offset: 1px; }
+.calendar-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.calendar-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; background: rgba(118,119,145,.16); }
+.calendar-legend i.done { background: color-mix(in srgb, var(--habit-color) 75%, transparent); }
+.calendar-legend i.skipped { background: color-mix(in srgb, #7c8aa5 40%, transparent); border-style: dashed; }
+.habit-rate-curve { width: 100%; max-width: 300px; height: 64px; }
+.curve-axis { display: flex; justify-content: space-between; max-width: 300px; font-size: 11px; color: var(--muted); }
+.habit-badges { display: flex; gap: 14px; flex-wrap: wrap; }
+.habit-badge { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; min-width: 58px; border-radius: 12px; background: rgba(118,119,145,.10); opacity: .55; filter: grayscale(1); }
+.habit-badge.achieved { opacity: 1; filter: none; background: color-mix(in srgb, var(--habit-color) 14%, transparent); box-shadow: 0 3px 10px color-mix(in srgb, var(--habit-color) 22%, transparent); }
+.habit-badge .badge-icon { font-size: 22px; line-height: 1; }
+.habit-badge .badge-label { font-size: 11px; color: var(--muted); }
+
+/* ===== emoji 选择器 ===== */
+.emoji-grid { display: grid; grid-template-columns: repeat(8, 32px); gap: 4px; }
+.emoji-cell { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid transparent; border-radius: 8px; background: transparent; cursor: pointer; transition: background .15s ease; }
+.emoji-cell:hover { background: rgba(118,119,145,.14); }
+.emoji-cell.active { border-color: var(--habit-color, #2f9c67); background: color-mix(in srgb, var(--habit-color, #2f9c67) 12%, transparent); }
