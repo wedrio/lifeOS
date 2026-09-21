@@ -1,4 +1,4 @@
-import type { Habit, HabitCheckIn, ISODate, PlanLevel } from '@lifeos/shared';
+import type { Habit, HabitCheckIn, ISODate, Plan, PlanLevel } from '@lifeos/shared';
 
 const DAY = 86_400_000;
 
@@ -68,6 +68,15 @@ export const periodLabel = (level: PlanLevel, period: string) => {
   if (level === 'week') return `${period.replace('-W', ' 年第 ')} 周`;
   const date = parseISODate(period);
   return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long', timeZone: 'UTC' });
+};
+
+/** 计划周期是否已过（相对 reference，默认今天）。
+ *  四级周期均为等宽格式（W 两位补零），字符串比较即时间先后（见 docs/01 §2.1.2 逾期聚合视图） */
+export const isPlanOverdue = (plan: Pick<Plan, 'level' | 'period'>, reference = today()): boolean => {
+  if (plan.level === 'year') return plan.period < reference.slice(0, 4);
+  if (plan.level === 'month') return plan.period < reference.slice(0, 7);
+  if (plan.level === 'week') return plan.period < isoWeekPeriod(reference);
+  return plan.period < reference;
 };
 
 export interface HabitStats {
