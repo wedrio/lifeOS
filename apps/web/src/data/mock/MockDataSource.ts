@@ -665,7 +665,16 @@ export class MockDataSource implements DataSource {
       return entity;
     }),
     remove: (planId: string) => this.mutate((store) => {
-      store.plans = store.plans.filter((item) => item.id !== planId && item.parentId !== planId);
+      // 级联删除：递归收集全部后代（子、孙……）一并移除，避免孤儿节点
+      const doomed = new Set<string>([planId]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        store.plans.forEach((item) => {
+          if (item.parentId && doomed.has(item.parentId) && !doomed.has(item.id)) { doomed.add(item.id); grew = true; }
+        });
+      }
+      store.plans = store.plans.filter((item) => !doomed.has(item.id));
       this.recalcAllPlanProgress(store);
     }),
     reorder: (ids: string[]) => this.mutate((store) => {

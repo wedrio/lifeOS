@@ -46,6 +46,13 @@ export function PlansPage() {
   useEffect(() => { void reload(); }, [reload]);
 
   const parentById = useMemo(() => new Map(allPlans.map((plan) => [plan.id, plan])), [allPlans]);
+  /** 各计划的后代总数（含子、孙……），用于删除级联确认提示 */
+  const descendantCountById = useMemo(() => {
+    const childrenMap = new Map<string, string[]>();
+    allPlans.forEach((plan) => { if (plan.parentId) { const arr = childrenMap.get(plan.parentId) ?? []; arr.push(plan.id); childrenMap.set(plan.parentId, arr); } });
+    const count = (id: string): number => (childrenMap.get(id) ?? []).reduce((sum, childId) => sum + 1 + count(childId), 0);
+    return new Map(allPlans.map((plan) => [plan.id, count(plan.id)]));
+  }, [allPlans]);
   /** 树形视图：当前周期计划为根（按 parentId 分组，同组内才是排序兄弟），后代从全量 plans 挂载（可跨层级/周期） */
   const treeGroups = useMemo(() => {
     const childrenMap = new Map<string, Plan[]>();
@@ -150,18 +157,19 @@ export function PlansPage() {
     </SpotlightCard>
 
     <Card title={level === 'day' && period === today() ? '今天的计划' : `${periodLabel(level, period)} 的计划`} extra={<Typography.Text type="secondary">{plans.length} 项</Typography.Text>}>
-      {loading ? <Skeleton active paragraph={{ rows: 8 }} /> : plans.length === 0 ? <Empty description="这个周期还没有计划"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty> : <div className="plan-list">{treeGroups.map(([parentKey, nodes]) => <Fragment key={parentKey || 'root'}>{nodes.map((node, index) => <PlanItem key={node.plan.id} node={node} index={index} siblings={nodes} depth={0} parent={parentKey ? parentById.get(parentKey) : undefined} collapsedIds={collapsedIds} onToggleCollapse={toggleCollapse} onToggle={(plan) => void togglePlan(plan)} onEdit={openEditor} onDelete={(plan) => void removePlan(plan)} onMove={(planId, siblingIds, direction) => void movePlan(planId, siblingIds, direction)} />)}</Fragment>)}</div>}
+      {loading ? <Skeleton active paragraph={{ rows: 8 }} /> : plans.length === 0 ? <Empty description="这个周期还没有计划"><Button type="primary" onClick={() => openEditor()}>创建计划</Button></Empty> : <div className="plan-list">{treeGroups.map(([parentKey, nodes]) => <Fragment key={parentKey || 'root'}>{nodes.map((node, index) => <PlanItem key={node.plan.id} node={node} index={index} siblings={nodes} depth={0} parent={parentKey ? parentById.get(parentKey) : undefined} descendantCount={descendantCountById.get(node.plan.id) ?? 0} collapsedIds={collapsedIds} onToggleCollapse={toggleCollapse} onToggle={(plan) => void togglePlan(plan)} onEdit={openEditor} onDelete={(plan) => void removePlan(plan)} onMove={(planId, siblingIds, direction) => void movePlan(planId, siblingIds, direction)} />)}</Fragment>)}</div>}
     </Card>
     <PlanFormModal open={editorOpen} plan={editing} plans={allPlans} defaultLevel={level} defaultPlanPeriod={period} onClose={() => { setEditorOpen(false); setEditing(undefined); }} onSaved={reload} />
   </>;
 }
 
-function PlanItem({ node, index, siblings, depth, parent, collapsedIds, onToggleCollapse, onToggle, onEdit, onDelete, onMove }: {
+function PlanItem({ node, index, siblings, depth, parent, descendantCount, collapsedIds, onToggleCollapse, onToggle, onEdit, onDelete, onMove }: {
   node: PlanNode;
   index: number;
   siblings: PlanNode[];
   depth: number;
   parent?: Plan;
+  descendantCount: number;
   collapsedIds: ReadonlySet<string>;
   onToggleCollapse: (planId: string) => void;
   onToggle: (plan: Plan) => void;
@@ -179,8 +187,8 @@ function PlanItem({ node, index, siblings, depth, parent, collapsedIds, onToggle
       {childCount > 0 && <Button type="text" size="small" className="plan-tree-toggle" icon={collapsed ? <CaretRightOutlined /> : <CaretDownOutlined />} onClick={() => onToggleCollapse(plan.id)} aria-label={collapsed ? '展开子计划' : '折叠子计划'} />}
       <Tooltip title={childCount > 0 ? `勾选将级联完成全部 ${childCount} 个子计划` : undefined}><Checkbox checked={plan.status === 'completed'} onChange={() => onToggle(plan)} aria-label={`完成 ${plan.title}`} /></Tooltip>
       <div className="plan-item-main"><div className="plan-item-title-row"><span className="plan-item-title">{plan.title}</span><Tag color={status.color}>{status.label}</Tag><Tag color={priority.color}>{priority.label}</Tag>{childCount > 0 && <Tooltip title={`进度由 ${childCount} 个子计划自动汇总`}><Tag color="green">自动汇总</Tag></Tooltip>}</div><div className="plan-item-description">{plan.description}</div><div className="plan-item-meta">{parent && <span>↳ 关联：{parent.title}</span>}<span>进度 {plan.progress}%</span></div><div className="plan-item-progress"><Progress percent={plan.progress} size="small" showInfo={false} status={plan.status === 'cancelled' ? 'exception' : 'normal'} /></div></div>
-      <div className="plan-item-actions"><Tooltip title="上移"><Button type="text" size="small" disabled={index <= 0} icon={<UpOutlined />} onClick={() => onMove(plan.id, siblings.map((item) => item.plan.id), -1)} /></Tooltip><Tooltip title="下移"><Button type="text" size="small" disabled={index >= siblings.length - 1} icon={<DownOutlined />} onClick={() => onMove(plan.id, siblings.map((item) => item.plan.id), 1)} /></Tooltip><Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(plan)} aria-label="编辑计划" /><Popconfirm title="删除这个计划？" description="其直接下级计划也会被删除。" onConfirm={() => onDelete(plan)} okText="删除" cancelText="取消"><Button type="text" danger size="small" icon={<DeleteOutlined />} aria-label="删除计划" /></Popconfirm></div>
+      <div className="plan-item-actions"><Tooltip title="上移"><Button type="text" size="small" disabled={index <= 0} icon={<UpOutlined />} onClick={() => onMove(plan.id, siblings.map((item) => item.plan.id), -1)} /></Tooltip><Tooltip title="下移"><Button type="text" size="small" disabled={index >= siblings.length - 1} icon={<DownOutlined />} onClick={() => onMove(plan.id, siblings.map((item) => item.plan.id), 1)} /></Tooltip><Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(plan)} aria-label="编辑计划" /><Popconfirm title="删除这个计划？" description={descendantCount > 0 ? `将连带删除全部 ${descendantCount} 个后代计划。` : undefined} onConfirm={() => onDelete(plan)} okText="删除" cancelText="取消"><Button type="text" danger size="small" icon={<DeleteOutlined />} aria-label="删除计划" /></Popconfirm></div>
     </div>
-    {childCount > 0 && !collapsed && <div className="plan-tree-children">{node.children.map((child, childIndex) => <PlanItem key={child.plan.id} node={child} index={childIndex} siblings={node.children} depth={depth + 1} collapsedIds={collapsedIds} onToggleCollapse={onToggleCollapse} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} onMove={onMove} />)}</div>}
+    {childCount > 0 && !collapsed && <div className="plan-tree-children">{node.children.map((child, childIndex) => <PlanItem key={child.plan.id} node={child} index={childIndex} siblings={node.children} depth={depth + 1} descendantCount={descendantCount} collapsedIds={collapsedIds} onToggleCollapse={onToggleCollapse} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} onMove={onMove} />)}</div>}
   </>;
 }
