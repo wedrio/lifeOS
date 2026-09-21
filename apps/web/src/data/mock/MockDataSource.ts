@@ -542,6 +542,11 @@ export class MockDataSource implements DataSource {
       const dailyTarget = habit.frequency === 'daily' ? habit.timesPerPeriod : 1;
       const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
       if (existing) {
+        if (existing.state === 'skip') {
+          // 休息日直接打卡 = 转为完成
+          delete existing.state;
+          return this.touch(existing, { count: 1 });
+        }
         const count = existing.count ?? 1;
         if (count >= dailyTarget) throw new Error('今日目标次数已完成，再点将逐次取消打卡');
         return this.touch(existing, { count: count + 1 });
@@ -555,9 +560,28 @@ export class MockDataSource implements DataSource {
       if (habit?.archived) throw new Error('已归档习惯不能修改打卡');
       const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
       if (!existing) return;
+      if (existing.state === 'skip') {
+        store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date));
+        return;
+      }
       const count = existing.count ?? 1;
       if (count > 1) this.touch(existing, { count: count - 1 });
       else store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date));
+    }),
+    skipDay: (habitId: string, date: ISODate) => this.mutate((store) => {
+      const habit = store.habits.find((item) => item.id === habitId);
+      if (!habit) throw new Error('未找到该习惯');
+      if (habit.archived) throw new Error('已归档习惯不能修改打卡');
+      const existing = store.habitCheckIns.find((item) => item.habitId === habitId && item.date === date);
+      if (existing?.state === 'skip') return existing;
+      if (existing && (existing.count ?? 1) > 0) throw new Error('今日已完成，无需休息');
+      if (existing) return this.touch(existing, { state: 'skip' as const });
+      const entity: HabitCheckIn = { ...base(), habitId, date, count: 0, state: 'skip' };
+      store.habitCheckIns.push(entity);
+      return entity;
+    }),
+    unskipDay: (habitId: string, date: ISODate) => this.mutate((store) => {
+      store.habitCheckIns = store.habitCheckIns.filter((item) => !(item.habitId === habitId && item.date === date && item.state === 'skip'));
     }),
     listCheckIns: (habitId: string, from: ISODate, to: ISODate) => this.query((store) =>
       store.habitCheckIns.filter((item) => item.habitId === habitId && item.date >= from && item.date <= to),
@@ -807,9 +831,9 @@ export class MockDataSource implements DataSource {
       const overduePlans = store.plans.filter((item) => item.level === 'day' && item.period < today && !['completed', 'cancelled'].includes(item.status)).sort((a, b) => b.period.localeCompare(a.period) || a.order - b.order);
       const completedPlans = todayPlans.filter((item) => item.status === 'completed').length;
       const activeHabits = store.habits.filter((item) => !item.archived);
-      // 今日打卡进度只统计「今天需要打卡」的习惯（custom 频率非调度日不计入分母）
+      // 今日打卡进度只统计「今天需要打卡」的习惯（custom 频率非调度日不计入分母）；休息日视为已安顿
       const dueHabits = activeHabits.filter((habit) => isHabitDue(habit, today));
-      const completedHabits = dueHabits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today && (checkIn.count ?? 1) > 0)).length;
+      const completedHabits = dueHabits.filter((habit) => store.habitCheckIns.some((checkIn) => checkIn.habitId === habit.id && checkIn.date === today && (checkIn.state === 'skip' || (checkIn.count ?? 1) > 0))).length;
       const month = today.slice(0, 7);
       const year = today.slice(0, 4);
       const expenses = store.transactions.filter((item) => item.type === 'expense');

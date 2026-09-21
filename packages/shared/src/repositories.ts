@@ -13,6 +13,10 @@ export interface HabitRepository {
   remove(id: string): Promise<void>;
   checkIn(habitId: string, date: ISODate, note?: string): Promise<HabitCheckIn>;
   uncheck(habitId: string, date: ISODate): Promise<void>;
+  /** 标记某天为休息日（skip）：不清 streak、不计未完成 */
+  skipDay(habitId: string, date: ISODate): Promise<HabitCheckIn>;
+  /** 取消休息日标记 */
+  unskipDay(habitId: string, date: ISODate): Promise<void>;
   listCheckIns(habitId: string, from: ISODate, to: ISODate): Promise<HabitCheckIn[]>;
 }
 

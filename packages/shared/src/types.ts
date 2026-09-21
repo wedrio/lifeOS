@@ -23,11 +23,14 @@ export interface Habit extends BaseEntity {
   archived: boolean;
 }
 export type HabitInput = Omit<Habit, keyof BaseEntity | 'archived'> & { archived?: boolean };
+export type HabitCheckInState = 'done' | 'skip';
 export interface HabitCheckIn extends BaseEntity {
   habitId: string;
   date: ISODate;
   /** 当日完成次数，默认 1，上限为 habit.timesPerPeriod（daily 多次打卡逐次累加） */
   count?: number;
+  /** done=完成（默认）；skip=休息日，不清 streak、不计未完成 */
+  state?: HabitCheckInState;
   note?: string;
 }
 

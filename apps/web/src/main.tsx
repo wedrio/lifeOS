@@ -6,11 +6,14 @@ import { HashRouter } from 'react-router-dom';
 import { AppRoutes } from './routes';
 import { useUIStore } from './stores/uiStore';
 import { dataSource } from './data';
+import { startHabitReminderScheduler } from './lib/reminders';
 import './styles/global.css';
 
 function Application() {
   const theme = useUIStore((state) => state.theme);
   const setTheme = useUIStore((state) => state.setTheme);
+
+  useEffect(() => startHabitReminderScheduler(), []);
 
   useEffect(() => {
     void dataSource.settings.get().then((settings) => {

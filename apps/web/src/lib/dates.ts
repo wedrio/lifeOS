@@ -105,6 +105,14 @@ const doneCountByDate = (checkIns: HabitCheckIn[]) => {
   return map;
 };
 
+/** 便捷读取某天记录；done=完成（含次数）、skip=休息、none=未打 */
+const recordOf = (checkIns: HabitCheckIn[], date: ISODate) => checkIns.find((item) => item.date === date);
+const dayState = (record: HabitCheckIn | undefined): 'done' | 'skip' | 'none' => {
+  if (!record) return 'none';
+  if (record.state === 'skip') return 'skip';
+  return (record.count ?? 1) > 0 ? 'done' : 'none';
+};
+
 /** 一周（周一为起点）内的完成次数 */
 const weekDoneCount = (done: Map<ISODate, number>, weekStart: ISODate): number => {
   let sum = 0;
@@ -123,11 +131,14 @@ export function habitExpectedCount(habit: Habit, reference: ISODate): number {
 
 export function calculateHabitStats(habit: Habit, checkIns: HabitCheckIn[], reference = today()): HabitStats {
   const done = doneCountByDate(checkIns);
-  const isDone = (date: ISODate) => (done.get(date) ?? 0) > 0;
+  const isSkipped = (date: ISODate) => dayState(recordOf(checkIns, date)) === 'skip';
   const totalCheckIns = [...done.values()].reduce((sum, count) => sum + count, 0);
+  const last30Start = addDays(reference, -29);
+  const inLast30 = (item: HabitCheckIn) => item.date >= last30Start && item.date <= reference;
+  const doneCount30 = checkIns.filter((item) => inLast30(item) && dayState(item) === 'done').reduce((sum, item) => sum + (item.count ?? 1), 0);
 
   if (habit.frequency === 'weekly') {
-    // 按「达标周」连续：一周内完成次数 ≥ timesPerPeriod 即达标，中断周才清零
+    // 按「达标周」连续：一周内完成天数 ≥ timesPerPeriod 即达标，中断周才清零；休息日不影响
     const qualifies = (weekStart: ISODate) => weekDoneCount(done, weekStart) >= habit.timesPerPeriod;
     const thisWeek = startOfWeek(reference);
     const firstWeek = startOfWeek(checkIns.reduce<ISODate>((min, item) => (item.date < min ? item.date : min), reference));
@@ -140,23 +151,23 @@ export function calculateHabitStats(habit: Habit, checkIns: HabitCheckIn[], refe
     let current = 0;
     let cursor = qualifies(thisWeek) ? thisWeek : addDays(thisWeek, -7);
     while (cursor >= firstWeek && qualifies(cursor)) { current += 1; cursor = addDays(cursor, -7); }
-    const last30Start = addDays(reference, -29);
-    const completeIn30 = checkIns.filter((item) => item.date >= last30Start && item.date <= reference).reduce((sum, item) => sum + (item.count ?? 1), 0);
-    return { currentStreak: current, longestStreak: longest, streakUnit: 'week', totalCheckIns, recent30Rate: Math.min(100, Math.round((completeIn30 / Math.max(habitExpectedCount(habit, reference), 1)) * 100)) };
+    return { currentStreak: current, longestStreak: longest, streakUnit: 'week', totalCheckIns, recent30Rate: Math.min(100, Math.round((doneCount30 / Math.max(habitExpectedCount(habit, reference), 1)) * 100)) };
   }
 
   if (habit.frequency === 'custom') {
-    // 仅统计调度日：非调度日跳过且不断签
-    const scheduledDone = (date: ISODate) => isHabitDue(habit, date) && isDone(date);
-    // 从今天往回找：最近的调度日若已完成则从它起算，否则从上一个调度日起算
+    // 仅统计调度日：非调度日跳过且不断签；调度日休息（skip）不清 streak 也不计未完成
+    const scheduledState = (date: ISODate): 'done' | 'skip' | 'none' => (isHabitDue(habit, date) ? dayState(recordOf(checkIns, date)) : 'none');
     let anchor = reference;
-    if (isHabitDue(habit, anchor) && !scheduledDone(anchor)) anchor = addDays(anchor, -1);
-    while (!isHabitDue(habit, anchor)) anchor = addDays(anchor, -1);
+    if (scheduledState(anchor) === 'none') {
+      do { anchor = addDays(anchor, -1); } while (!isHabitDue(habit, anchor) && anchor > addDays(reference, -730));
+      if (!isHabitDue(habit, anchor)) return { currentStreak: 0, longestStreak: 0, streakUnit: 'day', totalCheckIns, recent30Rate: 0 };
+    }
     let currentStreak = 0;
     let scan = anchor;
     while (isHabitDue(habit, scan)) {
-      if (!scheduledDone(scan)) break;
-      currentStreak += 1;
+      const state = scheduledState(scan);
+      if (state === 'none') break;
+      if (state === 'done') currentStreak += 1;
       do { scan = addDays(scan, -1); } while (!isHabitDue(habit, scan));
     }
     let longestStreak = 0;
@@ -165,37 +176,51 @@ export function calculateHabitStats(habit: Habit, checkIns: HabitCheckIn[], refe
     [...done.keys()].sort().forEach((date) => {
       if (!isHabitDue(habit, date)) return;
       const consecutive = previous === undefined || (() => {
+        // previous 与 date 之间的调度日必须全部完成或休息
         let cursor = previous as ISODate;
-        do { cursor = addDays(cursor, 1); } while (!isHabitDue(habit, cursor));
+        do {
+          cursor = addDays(cursor, 1);
+          if (isHabitDue(habit, cursor) && scheduledState(cursor) === 'none') return false;
+        } while (cursor < date);
         return cursor === date;
       })();
       running = consecutive ? running + 1 : 1;
       longestStreak = Math.max(longestStreak, running);
       previous = date;
     });
-    const last30Start = addDays(reference, -29);
-    const completeIn30 = checkIns.filter((item) => item.date >= last30Start && item.date <= reference).reduce((sum, item) => sum + (item.count ?? 1), 0);
-    return { currentStreak, longestStreak, streakUnit: 'day', totalCheckIns, recent30Rate: Math.min(100, Math.round((completeIn30 / Math.max(habitExpectedCount(habit, reference), 1)) * 100)) };
+    let scheduled30 = 0;
+    let skipped30 = 0;
+    for (let index = 0; index < 30; index += 1) {
+      const date = addDays(reference, -index);
+      if (isHabitDue(habit, date)) { scheduled30 += 1; if (isSkipped(date)) skipped30 += 1; }
+    }
+    return { currentStreak, longestStreak, streakUnit: 'day', totalCheckIns, recent30Rate: Math.min(100, Math.round((doneCount30 / Math.max(scheduled30 - skipped30, 1)) * 100)) };
   }
 
-  // daily：按自然日连续
-  let cursor = isDone(reference) ? reference : addDays(reference, -1);
+  // daily：按自然日连续；休息日不清 streak 也不计未完成；今天还没打则从昨天起算（streak 保留待续）
   let currentStreak = 0;
-  while (isDone(cursor)) { currentStreak += 1; cursor = addDays(cursor, -1); }
-
-  const ordered = [...done.keys()].sort();
+  let cursor = dayState(recordOf(checkIns, reference)) === 'none' ? addDays(reference, -1) : reference;
+  while (cursor >= addDays(reference, -730)) {
+    const state = dayState(recordOf(checkIns, cursor));
+    if (state === 'done') currentStreak += 1;
+    else if (state === 'none') break;
+    cursor = addDays(cursor, -1);
+  }
+  const earliest = checkIns.reduce<ISODate | undefined>((min, item) => (!min || item.date < min ? item.date : min), undefined);
   let longestStreak = 0;
   let running = 0;
-  let previous: ISODate | undefined;
-  ordered.forEach((date) => {
-    running = previous && daysBetween(previous, date) === 1 ? running + 1 : 1;
-    longestStreak = Math.max(longestStreak, running);
-    previous = date;
-  });
-
-  const last30Start = addDays(reference, -29);
-  const completeIn30 = checkIns.filter((item) => item.date >= last30Start && item.date <= reference).reduce((sum, item) => sum + (item.count ?? 1), 0);
-  return { currentStreak, longestStreak, streakUnit: 'day', totalCheckIns, recent30Rate: Math.min(100, Math.round((completeIn30 / Math.max(habitExpectedCount(habit, reference), 1)) * 100)) };
+  if (earliest) {
+    for (let day = earliest; day <= reference; day = addDays(day, 1)) {
+      const state = dayState(recordOf(checkIns, day));
+      if (state === 'done') running += 1;
+      else if (state === 'none') running = 0;
+      longestStreak = Math.max(longestStreak, running);
+    }
+  }
+  let skipped30 = 0;
+  for (let index = 0; index < 30; index += 1) if (isSkipped(addDays(reference, -index))) skipped30 += 1;
+  const expected30 = Math.max((30 - skipped30) * habit.timesPerPeriod, 1);
+  return { currentStreak, longestStreak, streakUnit: 'day', totalCheckIns, recent30Rate: Math.min(100, Math.round((doneCount30 / expected30) * 100)) };
 }
 
 /** 本周（截至今日）已完成次数，用于 weekly 弹性目标展示「本周还需 N 次」 */
@@ -207,6 +232,53 @@ export const habitWeekProgress = (habit: Habit, checkIns: HabitCheckIn[], refere
   const done = doneCountByDate(checkIns);
   return { done: weekDoneCount(done, startOfWeek(reference)), target: habit.timesPerPeriod };
 };
+
+export interface HabitCalendarCell { date: ISODate; inMonth: boolean; }
+
+/** 当月月历（周一为起点），inMonth=false 表示前后补位的相邻月份日期 */
+export function buildMonthCalendar(reference = today()): HabitCalendarCell[][] {
+  const firstOfMonth = `${reference.slice(0, 7)}-01`;
+  const gridStart = startOfWeek(firstOfMonth);
+  const lastOfMonth = shiftMonthEnd(reference.slice(0, 7));
+  const gridEnd = addDays(startOfWeek(lastOfMonth), 6);
+  const totalDays = daysBetween(gridStart, gridEnd) + 1;
+  return Array.from({ length: Math.ceil(totalDays / 7) }, (_, week) => Array.from({ length: 7 }, (_, day) => {
+    const date = addDays(gridStart, week * 7 + day);
+    return { date, inMonth: date.slice(0, 7) === reference.slice(0, 7) };
+  }));
+}
+
+const shiftMonthEnd = (month: string): ISODate => {
+  const [year, mon] = month.split('-').map(Number);
+  return toISODate(new Date(Date.UTC(year, mon, 0, 12))); // 当月最后一天（正午锚点避免时区偏移）
+};
+
+/** 近 N 周滚动完成率（%），用于习惯详情曲线；weekly 频率按达标天数/目标折算 */
+export function habitRollingWeeklyRates(habit: Habit, checkIns: HabitCheckIn[], reference = today(), weeks = 12): number[] {
+  const records = new Map(checkIns.map((item) => [item.date, item]));
+  const thisWeek = startOfWeek(reference);
+  return Array.from({ length: weeks }, (_, index) => {
+    const weekStart = addDays(thisWeek, (index - weeks + 1) * 7);
+    const weekEnd = addDays(weekStart, 6);
+    let doneDays = 0;
+    let expected = 0;
+    for (let day = weekStart; day <= weekEnd; day = addDays(day, 1)) {
+      if (day > reference) break;
+      const record = records.get(day);
+      const state = dayState(record);
+      if (habit.frequency === 'weekly') {
+        if (state === 'done') doneDays += 1;
+      } else if (isHabitDue(habit, day)) {
+        expected += 1;
+        if (state === 'done') doneDays += 1;
+        if (state === 'skip') expected -= 1; // 休息日剔除期望
+      }
+    }
+    const target = habit.frequency === 'weekly' ? habit.timesPerPeriod : expected;
+    if (target <= 0) return 0;
+    return Math.min(100, Math.round((Math.min(doneDays, target) / target) * 100));
+  });
+}
 
 export interface HeatmapDay { date: ISODate; inRange: boolean; checked: boolean; }
 export function buildHeatmap(reference = today(), count = 365): HeatmapDay[][] {

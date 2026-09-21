@@ -25,6 +25,7 @@
 .heatmap-cell.level-1 { background: color-mix(in srgb, var(--habit-color) 38%, transparent); }
 .heatmap-cell.level-2 { background: color-mix(in srgb, var(--habit-color) 68%, transparent); }
 .heatmap-cell.level-3 { background: var(--habit-color); box-shadow: 0 2px 5px color-mix(in srgb, var(--habit-color) 35%, transparent); }
+.heatmap-cell.skipped { background: color-mix(in srgb, #7c8aa5 55%, transparent); border-style: dashed; }
 .heatmap-cell.today { outline: 1.5px solid color-mix(in srgb, var(--habit-color) 75%, #faad14 25%); outline-offset: 1px; }
 .heatmap-cell.outside { visibility: hidden; cursor: default; }
 .heatmap-cell:disabled { cursor: not-allowed; }
@@ -61,3 +62,26 @@
 [data-theme='dark'] .plan-item:hover { background: rgba(255,255,255,.07); }
 
 @media (max-width: 575px) { .habit-stats { gap: 5px; } .habit-stat { padding: 9px 3px; } .habit-stat strong { font-size: 17px; } .heatmap-months { grid-auto-columns: 11px; } .heatmap-grid { grid-template-rows: repeat(7, 11px); grid-auto-columns: 11px; gap: 3px; } .heatmap-cell { width: 11px; height: 11px; } .plan-item { gap: 9px; padding: 12px; } .plan-item-actions { flex-direction: column; } .plan-period-control .ant-input { width: 128px; } }
+
+/* ===== 习惯详情统计（月历 / 完成率曲线 / 里程碑徽章） ===== */
+.habit-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 26px; align-items: start; }
+.habit-detail-block { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.habit-month-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 280px; }
+.habit-month-calendar .calendar-head { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 0; }
+.calendar-cell { display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 8px; font-size: 12px; background: rgba(118,119,145,.10); color: var(--muted); border: 1px solid transparent; }
+.calendar-cell.done { background: color-mix(in srgb, var(--habit-color) 75%, transparent); color: #fff; font-weight: 600; }
+.calendar-cell.skipped { background: color-mix(in srgb, #7c8aa5 40%, transparent); border-style: dashed; color: inherit; }
+.calendar-cell.missed { background: rgba(118,119,145,.16); }
+.calendar-cell.idle, .calendar-cell.future, .calendar-cell.out-month { opacity: .4; }
+.calendar-cell.today { outline: 2px solid color-mix(in srgb, var(--habit-color) 75%, #faad14 25%); outline-offset: 1px; }
+.calendar-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.calendar-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; background: rgba(118,119,145,.16); }
+.calendar-legend i.done { background: color-mix(in srgb, var(--habit-color) 75%, transparent); }
+.calendar-legend i.skipped { background: color-mix(in srgb, #7c8aa5 40%, transparent); border-style: dashed; }
+.habit-rate-curve { width: 100%; max-width: 300px; height: 64px; }
+.curve-axis { display: flex; justify-content: space-between; max-width: 300px; font-size: 11px; color: var(--muted); }
+.habit-badges { display: flex; gap: 14px; flex-wrap: wrap; }
+.habit-badge { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; min-width: 58px; border-radius: 12px; background: rgba(118,119,145,.10); opacity: .55; filter: grayscale(1); }
+.habit-badge.achieved { opacity: 1; filter: none; background: color-mix(in srgb, var(--habit-color) 14%, transparent); box-shadow: 0 3px 10px color-mix(in srgb, var(--habit-color) 22%, transparent); }
+.habit-badge .badge-icon { font-size: 22px; line-height: 1; }
+.habit-badge .badge-label { font-size: 11px; color: var(--muted); }

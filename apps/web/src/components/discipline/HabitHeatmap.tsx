@@ -11,9 +11,9 @@ function cellLevel(count: number, dailyTarget: number): number {
 
 export function HabitHeatmap({ habit, checkIns, onToggle }: { habit: Habit; checkIns: HabitCheckIn[]; onToggle: (date: ISODate) => void }) {
   const reference = today();
-  const countByDate = useMemo(() => {
-    const map = new Map<ISODate, number>();
-    checkIns.forEach((item) => map.set(item.date, item.count ?? 1));
+  const recordByDate = useMemo(() => {
+    const map = new Map<ISODate, HabitCheckIn>();
+    checkIns.forEach((item) => map.set(item.date, item));
     return map;
   }, [checkIns]);
   const stats = calculateHabitStats(habit, checkIns, reference);
@@ -41,16 +41,20 @@ export function HabitHeatmap({ habit, checkIns, onToggle }: { habit: Habit; chec
       </div>
       <div className="heatmap-grid" aria-label={`${habit.name} 近一年打卡热力图`}>
         {weeks.flat().map(({ date, inRange }) => {
-          const count = countByDate.get(date) ?? 0;
+          const record = recordByDate.get(date);
+          const skipped = record?.state === 'skip';
+          const count = skipped ? 0 : record?.count ?? 0;
           const level = cellLevel(count, dailyTarget);
-          const tooltip = !inRange ? '' : count > 0
-            ? `${date} · 已完成 ${count}${dailyTarget > 1 ? `/${dailyTarget}` : ''} 次`
-            : isHabitDue(habit, date) ? `${date} · 未打卡` : `${date} · 非打卡日`;
+          const tooltip = !inRange ? '' : skipped
+            ? `${date} · 休息日 🛌`
+            : count > 0
+              ? `${date} · 已完成 ${count}${dailyTarget > 1 ? `/${dailyTarget}` : ''} 次${record?.note ? ` · ${record.note}` : ''}`
+              : isHabitDue(habit, date) ? `${date} · 未打卡` : `${date} · 非打卡日`;
           return <Tooltip key={date} title={tooltip}><button
             type="button"
-            aria-label={`${date}${count > 0 ? `，已完成 ${count} 次` : '，未完成'}`}
+            aria-label={`${date}${skipped ? '，休息日' : count > 0 ? `，已完成 ${count} 次` : '，未完成'}`}
             disabled={!inRange}
-            className={`heatmap-cell ${level > 0 ? `level-${level}` : ''} ${date === reference ? 'today' : ''} ${!inRange ? 'outside' : ''}`}
+            className={`heatmap-cell ${skipped ? 'skipped' : level > 0 ? `level-${level}` : ''} ${date === reference ? 'today' : ''} ${!inRange ? 'outside' : ''}`}
             onClick={() => onToggle(date)}
           /></Tooltip>;
         })}
