@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { dataSource, generateAllDemoData } from '../data';
 import { formatCents } from '../lib/finance';
 import { BookCover } from '../components/reading/BookCover';
+import { SeedCard } from '../components/seeds/SeedCard';
 import { CountUp, fireCelebrationCannon, fireConfetti, ShinyText, SpotlightCard, TiltedCard } from '../components/ui';
 import '../styles/dashboard.css';
 
@@ -28,6 +29,7 @@ export function DashboardPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [seedRefresh, setSeedRefresh] = useState(0);
   const navigate = useNavigate();
   const now = new Date();
 
@@ -74,6 +76,7 @@ export function DashboardPage() {
       if (created) {
         fireCelebrationCannon();
         message.success(`已补充 ${created} 条演示数据`);
+        setSeedRefresh((count) => count + 1);
       } else {
         message.info('所有板块已有数据，无需填充');
       }
@@ -304,6 +307,12 @@ export function DashboardPage() {
               </Empty>
             )}
           </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24}>
+          <SeedCard key={seedRefresh} />
         </Col>
       </Row>
 

@@ -31,6 +31,9 @@ import type {
   PlanInput,
   ReadingLog,
   ReadingLogInput,
+  Seed,
+  SeedFilter,
+  SeedInput,
   Settings,
   SettingsInput,
   Transaction,
@@ -55,6 +58,7 @@ interface MockStore {
   budgets: Budget[];
   assets: Asset[];
   moments: Moment[];
+  seeds: Seed[];
   settings: Settings;
 }
 
@@ -119,6 +123,7 @@ function initialStore(): MockStore {
     budgets: [],
     assets: [],
     moments: [],
+    seeds: [],
     settings: {
       id: 'settings',
       userId: USER_ID,
@@ -200,6 +205,10 @@ function migrateStore(store: MockStore): boolean {
   }
   if (!Array.isArray(store.bookNotes)) {
     store.bookNotes = [];
+    changed = true;
+  }
+  if (!Array.isArray(store.seeds)) {
+    store.seeds = [];
     changed = true;
   }
   return changed;
@@ -432,7 +441,24 @@ function demoMomentsStore(store: MockStore): number {
   return moments.length;
 }
 
-const backupArrayKeys = ['habits', 'habitCheckIns', 'plans', 'books', 'readingLogs', 'bookNotes', 'categories', 'accounts', 'transactions', 'budgets', 'assets', 'moments'] as const;
+function demoSeedsStore(store: MockStore): number {
+  if (store.seeds.length > 0) return 0;
+  const reference = dateToday();
+  const daysAgo = (days: number) => `${shiftDate(reference, -days)}T10:00:00.000Z`;
+  const demoSeeds: Seed[] = [
+    { ...base(), id: 'demo-seed-excalidraw', title: 'Excalidraw 手绘风白板，画架构草图很顺手', url: 'https://excalidraw.com', kind: 'tool', note: '别人博客里看到的，画示意图应该很好用', effort: 'm15', status: 'growing', createdAt: daysAgo(34), updatedAt: daysAgo(34) },
+    { ...base(), id: 'demo-seed-tutorial-react', title: 'React Server Components 入门教程', url: 'https://react.dev/learn', kind: 'tutorial', note: '周末有空跟着敲一遍', effort: 'm60', status: 'growing', createdAt: daysAgo(12), updatedAt: daysAgo(12) },
+    { ...base(), id: 'demo-seed-article-sleep', title: '《为什么睡觉总睡不好》公众号长文', kind: 'article', note: '通勤时刷到的，说深睡眠占比是关键', effort: 'm5', status: 'growing', createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+    { ...base(), id: 'demo-seed-video-cook', title: 'B 站视频：十分钟搞定一周便当', kind: 'video', effort: 'm15', status: 'growing', createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { ...base(), id: 'demo-seed-tool-raycast', title: 'Raycast 剪贴板历史用法', url: 'https://www.raycast.com', kind: 'tool', note: '据说能省很多复制粘贴时间', effort: 'm5', status: 'growing', createdAt: daysAgo(6), updatedAt: daysAgo(6) },
+    { ...base(), id: 'demo-seed-article-finance', title: '指数基金定投入门文章', kind: 'article', note: '讲得挺通俗，值得完整读一遍', effort: 'm30', status: 'pulled', settledAt: shiftDate(reference, -2), createdAt: daysAgo(9), updatedAt: `${shiftDate(reference, -2)}T10:00:00.000Z` },
+    { ...base(), id: 'demo-seed-video-guitar', title: '吉他入门第一课', kind: 'video', note: '当时很心动，试了一次就放下了', effort: 'm30', status: 'abandoned', settledAt: shiftDate(reference, -20), createdAt: daysAgo(48), updatedAt: `${shiftDate(reference, -20)}T10:00:00.000Z` },
+  ];
+  store.seeds.push(...demoSeeds);
+  return demoSeeds.length;
+}
+
+const backupArrayKeys = ['habits', 'habitCheckIns', 'plans', 'books', 'readingLogs', 'bookNotes', 'categories', 'accounts', 'transactions', 'budgets', 'assets', 'moments', 'seeds'] as const;
 
 function isBackupPayload(value: unknown): value is BackupPayload {
   if (!value || typeof value !== 'object') return false;
@@ -549,6 +575,10 @@ export class MockDataSource implements DataSource {
     return this.mutate((store) => demoMomentsStore(store));
   }
 
+  async generateSeedsDemoData(): Promise<number> {
+    return this.mutate((store) => demoSeedsStore(store));
+  }
+
   async generateAllDemoData(): Promise<number> {
     return this.mutate((store) => {
       let created = 0;
@@ -562,6 +592,7 @@ export class MockDataSource implements DataSource {
       created += demoReadingStore(store);
       created += demoAssetsStore(store);
       created += demoMomentsStore(store);
+      created += demoSeedsStore(store);
       return created;
     });
   }
@@ -881,6 +912,29 @@ export class MockDataSource implements DataSource {
     }),
   };
 
+  seeds = {
+    list: (filter: SeedFilter = {}) => this.query((store) => store.seeds
+      .filter((item) => !filter.status || item.status === filter.status)
+      .filter((item) => !filter.effort || item.effort === filter.effort)
+      .filter((item) => !filter.kind || item.kind === filter.kind)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, filter.limit ?? Number.POSITIVE_INFINITY)),
+    create: (input: SeedInput) => this.mutate((store) => {
+      const entity: Seed = { ...base(), ...input, status: input.status ?? 'growing' };
+      store.seeds.push(entity);
+      return entity;
+    }),
+    update: (seedId: string, patch: Partial<SeedInput>) => this.mutate((store) => {
+      const entity = store.seeds.find((item) => item.id === seedId);
+      if (!entity) throw new Error('未找到这棵草');
+      if (patch.status === 'growing') delete entity.settledAt;
+      return this.touch(entity, patch);
+    }),
+    remove: (seedId: string) => this.mutate((store) => {
+      store.seeds = store.seeds.filter((item) => item.id !== seedId);
+    }),
+  };
+
   settings = {
     get: () => this.query((store) => {
       // 展示口径：跨月未使用时按「已重新发放」返回（持久化在下次 mutate 时落盘）
@@ -914,6 +968,7 @@ export class MockDataSource implements DataSource {
         store.budgets = mergeById(store.budgets, incoming.budgets || []);
         store.assets = mergeById(store.assets, incoming.assets || []);
         store.moments = mergeById(store.moments, incoming.moments || []);
+        store.seeds = mergeById(store.seeds, incoming.seeds || []);
         store.settings = incoming.settings;
       }
       migrateStore(store);

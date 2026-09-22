@@ -140,6 +140,16 @@ export const momentInputSchema = z.object({
   links: z.array(z.object({ type: z.enum(['habit_checkin', 'transaction', 'asset', 'book', 'book_note']), id: z.string().min(1) })).max(30),
 });
 
+export const seedInputSchema = z.object({
+  title: z.string().trim().min(1, '先给这棵草起个名字').max(120),
+  url: z.string().url('请输入有效链接').optional().or(z.literal('')),
+  kind: z.enum(['video', 'article', 'tool', 'tutorial']),
+  note: z.string().trim().max(200).optional(),
+  effort: z.enum(['m5', 'm15', 'm30', 'm60']),
+  status: z.enum(['growing', 'pulled', 'abandoned']).optional(),
+  settledAt: date.optional(),
+});
+
 export const settingsInputSchema = z.object({
   currency: z.string().trim().min(1).max(6),
   theme: z.enum(['light', 'dark', 'system']),
