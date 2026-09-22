@@ -6,7 +6,7 @@ import { dataSource } from '../../data';
 import { daysBetween, today } from '../../lib/dates';
 import { SeedFormModal } from './SeedFormModal';
 
-const KIND_META: Record<Seed['kind'], { emoji: string; label: string }> = {
+export const KIND_META: Record<Seed['kind'], { emoji: string; label: string }> = {
   video: { emoji: '📺', label: '视频' },
   article: { emoji: '📰', label: '文章' },
   tool: { emoji: '🧰', label: '工具' },
@@ -94,7 +94,6 @@ export function SeedCard() {
 
   return (
     <Card
-      title="种草清单"
       extra={(
         <Space size={8} wrap>
           <Segmented

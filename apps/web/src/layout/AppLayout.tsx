@@ -33,6 +33,7 @@ const navigation = [
   { key: '/finance/stats', icon: <BarChartOutlined />, label: '财务洞察' },
   { key: '/assets', icon: <AppstoreOutlined />, label: '资产与订阅' },
   { key: '/moments', icon: <FileTextOutlined />, label: '日常记录' },
+  { key: '/seeds', icon: <span aria-hidden>🌱</span>, label: '种草清单' },
   { key: '/settings', icon: <SettingOutlined />, label: '偏好设置' },
 ];
 
@@ -54,9 +55,9 @@ const menuItems: MenuProps['items'] = [
     key: 'life',
     icon: <AppstoreOutlined />,
     label: '生活档案',
-    children: [navigation[7], navigation[8]],
+    children: [navigation[7], navigation[8], navigation[9]],
   },
-  navigation[9],
+  navigation[10],
 ];
 
 const mobileNavigation = [
@@ -64,7 +65,7 @@ const mobileNavigation = [
   { ...navigation[1], label: '成长', section: 'growth' },
   { ...navigation[4], label: '财务', section: 'finance' },
   { ...navigation[7], label: '生活', section: 'life' },
-  { ...navigation[9], label: '设置', section: 'settings' },
+  { ...navigation[10], label: '设置', section: 'settings' },
 ];
 
 function activeKey(pathname: string) {
@@ -74,7 +75,7 @@ function activeKey(pathname: string) {
 function activeSection(pathname: string) {
   if (pathname.startsWith('/discipline')) return 'growth';
   if (pathname.startsWith('/finance')) return 'finance';
-  if (pathname.startsWith('/assets') || pathname.startsWith('/moments')) return 'life';
+  if (pathname.startsWith('/assets') || pathname.startsWith('/moments') || pathname.startsWith('/seeds')) return 'life';
   if (pathname.startsWith('/settings')) return 'settings';
   return 'overview';
 }

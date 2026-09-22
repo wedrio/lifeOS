@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { dataSource, generateAllDemoData } from '../data';
 import { formatCents } from '../lib/finance';
 import { BookCover } from '../components/reading/BookCover';
-import { SeedCard } from '../components/seeds/SeedCard';
+import { SeedSummaryCard } from '../components/seeds/SeedSummaryCard';
 import { CountUp, fireCelebrationCannon, fireConfetti, ShinyText, SpotlightCard, TiltedCard } from '../components/ui';
 import '../styles/dashboard.css';
 
@@ -312,7 +312,7 @@ export function DashboardPage() {
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24}>
-          <SeedCard key={seedRefresh} />
+          <SeedSummaryCard key={seedRefresh} />
         </Col>
       </Row>
 

@@ -11,6 +11,7 @@ import { PlansPage } from './pages/PlansPage';
 import { ReadingPage } from './pages/ReadingPage';
 import { AssetsPage } from './pages/AssetsPage';
 import { MomentsPage } from './pages/MomentsPage';
+import { SeedsPage } from './pages/SeedsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export function AppRoutes() {
@@ -40,6 +41,7 @@ export function AppRoutes() {
             <Route path="/finance/stats" element={<FinanceStatsPage />} />
             <Route path="/assets" element={<AssetsPage />} />
             <Route path="/moments" element={<MomentsPage />} />
+            <Route path="/seeds" element={<SeedsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
