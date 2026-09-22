@@ -208,6 +208,32 @@ export interface MomentFilter {
   limit?: number;
 }
 
+/** 种草清单：growing=长草（还没动）pulled=拔草（做了）abandoned=弃坑（不要了） */
+export type SeedStatus = 'growing' | 'pulled' | 'abandoned';
+export type SeedKind = 'video' | 'article' | 'tool' | 'tutorial';
+/** 预计耗时档位：m60 表示 1 小时以上 */
+export type SeedEffort = 'm5' | 'm15' | 'm30' | 'm60';
+export interface Seed extends BaseEntity {
+  title: string;
+  url?: string;
+  kind: SeedKind;
+  note?: string;
+  effort: SeedEffort;
+  status: SeedStatus;
+  /** 拔草/弃坑日期；状态回改为 growing 时清空 */
+  settledAt?: ISODate;
+}
+export type SeedInput = Omit<Seed, keyof BaseEntity | 'status' | 'settledAt'> & {
+  status?: SeedStatus;
+  settledAt?: ISODate;
+};
+export interface SeedFilter {
+  status?: SeedStatus;
+  effort?: SeedEffort;
+  kind?: SeedKind;
+  limit?: number;
+}
+
 export type ThemeMode = 'light' | 'dark' | 'system';
 export interface Settings extends BaseEntity {
   currency: string;
@@ -273,6 +299,7 @@ export interface BackupPayload {
     budgets: Budget[];
     assets: Asset[];
     moments: Moment[];
+    seeds?: Seed[];
     settings: Settings;
   };
 }

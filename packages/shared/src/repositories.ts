@@ -4,6 +4,7 @@ import type {
   ISODate, Moment, MomentFilter, MomentInput, Plan, PlanFilter, PlanInput, Settings,
   SettingsInput, Transaction, TransactionFilter, TransactionInput, BackupImportMode, BackupPayload,
   Book, BookInput, BookFilter, ReadingLog, ReadingLogInput, BookNote, BookNoteInput, ReadingStats,
+  Seed, SeedFilter, SeedInput,
 } from './types';
 
 export interface HabitRepository {
@@ -73,6 +74,13 @@ export interface MomentRepository {
   remove(id: string): Promise<void>;
 }
 
+export interface SeedRepository {
+  list(filter?: SeedFilter): Promise<Seed[]>;
+  create(input: SeedInput): Promise<Seed>;
+  update(id: string, patch: Partial<SeedInput>): Promise<Seed>;
+  remove(id: string): Promise<void>;
+}
+
 export interface SettingsRepository {
   get(): Promise<Settings>;
   update(patch: Partial<SettingsInput>): Promise<Settings>;
@@ -97,6 +105,7 @@ export interface DataSource {
   finance: FinanceRepository;
   assets: AssetRepository;
   moments: MomentRepository;
+  seeds: SeedRepository;
   settings: SettingsRepository;
   stats: StatsRepository;
   backup: BackupRepository;
