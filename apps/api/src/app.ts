@@ -9,30 +9,62 @@ import { loadConfig, type AppConfig } from './config';
 import type { AuthRepository } from './repositories/authRepository';
 import { PrismaAuthRepository } from './repositories/prismaAuthRepository';
 import { UnavailableAuthRepository } from './repositories/unavailableAuthRepository';
+import type { HabitRepository } from './repositories/habitRepository';
+import { PrismaHabitRepository } from './repositories/prismaHabitRepository';
+import { UnavailableHabitRepository } from './repositories/unavailableHabitRepository';
+import type { SettingsRepository } from './repositories/settingsRepository';
+import { PrismaSettingsRepository } from './repositories/prismaSettingsRepository';
+import { UnavailableSettingsRepository } from './repositories/unavailableSettingsRepository';
+import type { StatsRepository } from './repositories/statsRepository';
+import { PrismaStatsRepository } from './repositories/prismaStatsRepository';
+import { UnavailableStatsRepository } from './repositories/unavailableStatsRepository';
 import { registerAuthRoutes } from './routes/authRoutes';
+import { registerHabitRoutes } from './routes/habitRoutes';
+import { registerSettingsRoutes } from './routes/settingsRoutes';
+import { registerStatsRoutes } from './routes/statsRoutes';
 import { AuthService } from './services/authService';
+import { HabitService } from './services/habitService';
+import { SettingsService } from './services/settingsService';
+import { StatsService } from './services/statsService';
 
-export interface BuildAppOptions { config?: AppConfig; prisma?: PrismaClient; authRepository?: AuthRepository; }
+export interface BuildAppOptions {
+  config?: AppConfig;
+  prisma?: PrismaClient;
+  authRepository?: AuthRepository;
+  habitRepository?: HabitRepository;
+  settingsRepository?: SettingsRepository;
+  statsRepository?: StatsRepository;
+}
 
 /** Creates the API shell; persistence is injected to keep routes/services independently testable. */
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const config = options.config ?? loadConfig();
   const app = Fastify({ logger: config.nodeEnv !== 'test' });
   let prisma = options.prisma;
-  let repository = options.authRepository;
-  let persistenceReady = Boolean(repository || prisma);
 
-  if (!repository) {
+  let authRepository = options.authRepository;
+  let habitRepository = options.habitRepository;
+  let settingsRepository = options.settingsRepository;
+  let statsRepository = options.statsRepository;
+  let persistenceReady = Boolean(authRepository || prisma);
+
+  if (!authRepository) {
     try {
       prisma ??= new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
-      repository = new PrismaAuthRepository(prisma);
+      authRepository = new PrismaAuthRepository(prisma);
+      habitRepository ??= new PrismaHabitRepository(prisma);
+      settingsRepository ??= new PrismaSettingsRepository(prisma);
+      statsRepository ??= new PrismaStatsRepository(prisma);
       persistenceReady = true;
     } catch (error) {
       if (config.nodeEnv === 'production') throw error;
-      app.log.warn('Prisma Client is unavailable. Health checks remain online; auth routes will return 503 until prisma generate succeeds.');
-      repository = new UnavailableAuthRepository();
+      app.log.warn('Prisma Client is unavailable. Health checks remain online; data routes will return 503 until prisma generate succeeds.');
+      authRepository = new UnavailableAuthRepository();
     }
   }
+  habitRepository ??= new UnavailableHabitRepository();
+  settingsRepository ??= new UnavailableSettingsRepository();
+  statsRepository ??= new UnavailableStatsRepository();
 
   await app.register(cors, {
     credentials: true,
@@ -61,8 +93,15 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get('/health', async () => health());
   app.get('/api/health', async () => health());
 
-  const auth = new AuthService(repository, (user) => app.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: '15m' }));
+  const auth = new AuthService(authRepository, (user) => app.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: config.accessTokenTtl }));
+  const settingsService = new SettingsService(settingsRepository, config.timezone);
+  const habitService = new HabitService(habitRepository, settingsService);
+  const statsService = new StatsService(statsRepository);
+
   await app.register(async (instance) => registerAuthRoutes(instance, auth, config.nodeEnv === 'production'), { prefix: '/api/auth' });
+  await app.register(async (instance) => registerHabitRoutes(instance, habitService, config.timezone), { prefix: '/api/habits' });
+  await app.register(async (instance) => registerSettingsRoutes(instance, settingsService), { prefix: '/api/settings' });
+  await app.register(async (instance) => registerStatsRoutes(instance, statsService, config.timezone), { prefix: '/api/stats' });
 
   app.addHook('onClose', async () => { if (prisma) await prisma.$disconnect(); });
   return app;

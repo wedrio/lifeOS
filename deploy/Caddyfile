@@ -1,0 +1,15 @@
+# 站点地址由 .env.prod 的 SITE_ADDRESS 注入（Caddy 自动签发/续期 HTTPS 证书）
+# 无域名临时测试：SITE_ADDRESS=:80（走 HTTP，仅限内网/调试）
+{$SITE_ADDRESS} {
+	encode gzip zstd
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv/lifeos
+		try_files {path} /index.html
+		file_server
+	}
+}

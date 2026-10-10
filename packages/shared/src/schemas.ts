@@ -19,6 +19,18 @@ export const habitInputSchema = z.object({
   }
 });
 
+export const habitPatchSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  icon: z.string().min(1).max(8).optional(),
+  color: z.string().regex(/^#(?:[\dA-Fa-f]{3}){1,2}$/).optional(),
+  frequency: z.enum(['daily', 'weekly', 'custom']).optional(),
+  timesPerPeriod: z.number().int().min(1).max(365).optional(),
+  weekdays: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+  reminderTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  allowBackfillDays: z.number().int().min(0).max(365).optional(),
+  archived: z.boolean().optional(),
+});
+
 export const planInputSchema = z.object({
   title: z.string().trim().min(1).max(160),
   description: z.string().max(5000).optional(),
@@ -157,4 +169,14 @@ export const settingsInputSchema = z.object({
   autoRollOverIncompletePlans: z.boolean(),
   annualReadingTarget: z.number().int().min(1).max(500).default(12),
   mealBudget: z.object({ breakfast: money, lunch: money, dinner: money }).optional(),
+});
+
+export const habitCheckInInputSchema = z.object({
+  date,
+  note: z.string().trim().max(1000).optional(),
+  useMakeupCard: z.boolean().optional(),
+});
+
+export const habitSkipInputSchema = z.object({
+  date,
 });

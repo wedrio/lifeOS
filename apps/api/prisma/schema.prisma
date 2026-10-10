@@ -36,6 +36,7 @@ enum PlanPriority {
 enum TransactionType {
   expense
   income
+  repayment
 }
 
 enum AssetKind {
@@ -70,6 +71,10 @@ model User {
   budgets       Budget[]
   assets        Asset[]
   moments       Moment[]
+  books         Book[]
+  readingLogs   ReadingLog[]
+  bookNotes     BookNote[]
+  seeds         Seed[]
   settings      Settings?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -95,6 +100,7 @@ model Habit {
   color             String         @default("#5b5ce2")
   frequency         HabitFrequency @default(daily)
   timesPerPeriod    Int            @default(1)
+  weekdays          Int[]          @default([])
   reminderTime      String?
   allowBackfillDays Int            @default(0)
   archived          Boolean        @default(false)
@@ -110,6 +116,8 @@ model HabitCheckIn {
   id        String   @id @default(cuid())
   habitId   String
   date      String   @db.VarChar(10)
+  count     Int      @default(1)
+  state     String?
   note      String?
   habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -168,6 +176,7 @@ model Account {
   icon           String        @default("💳")
   initialBalance Int           @default(0)
   archived       Boolean       @default(false)
+  kind           String?
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions   Transaction[]
   createdAt      DateTime      @default(now())
@@ -183,6 +192,7 @@ model Transaction {
   amount     Int
   categoryId String
   accountId  String
+  toAccountId String?
   date       String          @db.VarChar(10)
   note       String?
   tags       Json            @default("[]")
@@ -263,7 +273,87 @@ model Settings {
   theme                        String   @default("system")
   weekStartsOn                 Int      @default(1)
   autoRollOverIncompletePlans  Boolean  @default(true)
+  annualReadingTarget          Int      @default(0)
+  makeupCardBalance            Int      @default(2)
+  makeupCardMonth              String?  @db.VarChar(7)
+  mealBudget                   Json     @default("{}")
   user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
+}
+
+model Book {
+  id          String       @id @default(cuid())
+  userId      String
+  title       String
+  author      String?
+  totalPages  Int
+  currentPage Int          @default(0)
+  status      String       @default("queue")
+  category    String?
+  coverUrl    String?
+  coverTheme  String?
+  rating      Int?
+  review      String?
+  takeaways   Json         @default("[]")
+  startDate   String?      @db.VarChar(10)
+  finishDate  String?      @db.VarChar(10)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs        ReadingLog[]
+  notes       BookNote[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId, status])
+}
+
+model ReadingLog {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  page      Int
+  pagesRead Int
+  note      String?
+  date      String   @db.VarChar(10)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([bookId])
+}
+
+model BookNote {
+  id         String   @id @default(cuid())
+  userId     String
+  bookId     String
+  pageNumber Int?
+  quote      String
+  thoughts   String?
+  tags       Json     @default("[]")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([bookId])
+}
+
+model Seed {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  url       String?
+  kind      String   @default("article")
+  note      String?
+  effort    String   @default("m15")
+  status    String   @default("growing")
+  settledAt String?  @db.VarChar(10)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
 }
