@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAppNavigate } from '../lib/navigation';
 import { message } from 'antd';
 import { useUIStore } from '../stores/uiStore';
 import { dataSource } from '../data';
 
 export function useGlobalShortcuts() {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const theme = useUIStore((state) => state.theme);
   const setTheme = useUIStore((state) => state.setTheme);
 

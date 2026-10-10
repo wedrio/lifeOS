@@ -10,7 +10,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import type { DashboardStats, MealBudget, Plan, Settings } from '@lifeos/shared';
-import { useNavigate } from 'react-router-dom';
+import { useAppNavigate } from '../lib/navigation';
 import { dataSource, generateAllDemoData } from '../data';
 import { formatCents } from '../lib/finance';
 import { BookCover } from '../components/reading/BookCover';
@@ -30,7 +30,7 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [seedRefresh, setSeedRefresh] = useState(0);
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const now = new Date();
 
   const reload = useCallback(async () => {
