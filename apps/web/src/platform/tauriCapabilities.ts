@@ -1,4 +1,6 @@
 import type { PlatformCapabilities, SharePayload } from '@lifeos/shared';
+import { isAndroid } from './os';
+import { pickImagesFromInput } from './pickImages';
 
 /**
  * Platform capabilities backed by the Tauri 2 desktop shell.
@@ -42,7 +44,10 @@ export const tauriCapabilities: PlatformCapabilities = {
       : await notification.requestPermission();
     if (granted) await notification.sendNotification({ title, body });
   },
-  async pickImages(max) {
+  async pickImages(max, options) {
+    // Android：WebView 原生支持 <input type="file">（capture 可调起相机），
+    // 比桌面 dialog.open + fs.readFile(content://) 更可靠。
+    if (isAndroid()) return pickImagesFromInput(max, options);
     const { dialog, fs } = await loadPlugins();
     const paths = await dialog.open({
       multiple: max > 1,

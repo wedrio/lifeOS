@@ -36,7 +36,7 @@ body::after { bottom: -35vw; left: -22vw; background: radial-gradient(circle, rg
 ::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 10px; background: rgba(75, 126, 91, .28); background-clip: padding-box; }
 ::-webkit-scrollbar-track { background: transparent; }
 
-.app-shell { position: relative; min-height: 100vh; overflow: hidden; background: linear-gradient(140deg, #fbfff8 0%, #edf8ee 48%, #fbfbed 100%) !important; }
+.app-shell { position: relative; min-height: 100vh; overflow: hidden; padding-top: env(safe-area-inset-top); background: linear-gradient(140deg, #fbfff8 0%, #edf8ee 48%, #fbfbed 100%) !important; }
 .app-shell::before, .app-shell::after { position: fixed; z-index: 0; border-radius: 999px; content: ""; pointer-events: none; }
 .app-shell::before { top: 20%; left: 27%; width: 260px; height: 260px; background: rgba(133, 221, 156, .20); filter: blur(65px); }
 .app-shell::after { right: 8%; bottom: 7%; width: 310px; height: 310px; background: rgba(225, 220, 117, .17); filter: blur(75px); }
@@ -495,7 +495,7 @@ body .action-card:hover { border-color: rgba(35,141,91,.42) !important; transfor
   .mobile-menu-trigger { display: inline-flex; }
   .topbar-pulse { display: none; }
   .topbar-title { font-size: 12px; }
-  .content { padding: 24px 16px 104px; }
+  .content { padding: 24px 16px calc(104px + env(safe-area-inset-bottom)); }
   .page-heading { align-items: flex-start; margin-bottom: 20px; }
   .page-heading h1 { font-size: 29px; }
   .page-heading p { max-width: 255px; font-size: 12px; }

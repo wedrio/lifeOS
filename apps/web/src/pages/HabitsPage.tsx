@@ -10,6 +10,7 @@ import { HabitHeatmap } from '../components/discipline/HabitHeatmap';
 import { HabitStatBlocks } from '../components/discipline/HabitStatBlocks';
 import { HabitDetailPanel } from '../components/discipline/HabitDetailPanel';
 import { CountUp, fireCelebrationCannon, fireConfetti, SpotlightCard } from '../components/ui';
+import { useBackDismiss } from '../lib/backGuard';
 import '../styles/discipline.css';
 
 type HabitView = 'active' | 'archived';
@@ -193,6 +194,7 @@ export function HabitsPage() {
 }
 
 function HabitNoteModal({ habit, onClose, onSave }: { habit?: Habit; onClose: () => void; onSave: (note: string) => void }) {
+  useBackDismiss(Boolean(habit), onClose);
   const [note, setNote] = useState('');
   useEffect(() => { if (habit) setNote(''); }, [habit]);
   return <Modal open={Boolean(habit)} title={habit ? `带备注打卡：${habit.icon} ${habit.name}` : ''} onCancel={onClose} footer={null} destroyOnClose>

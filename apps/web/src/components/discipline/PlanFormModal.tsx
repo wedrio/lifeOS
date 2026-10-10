@@ -4,6 +4,7 @@ import type { Plan, PlanInput, PlanLevel, PlanPriority, PlanStatus } from '@life
 import { planInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { defaultPeriod, periodInputType } from '../../lib/dates';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface PlanFormValues {
   title: string;
@@ -20,6 +21,7 @@ const levelOrder: Record<PlanLevel, number> = { year: 0, month: 1, week: 2, day:
 const levelName: Record<PlanLevel, string> = { year: '年度', month: '月度', week: '周', day: '日' };
 
 export function PlanFormModal({ plan, plans, defaultLevel, defaultPlanPeriod, open, onClose, onSaved }: { plan?: Plan; plans: Plan[]; defaultLevel: PlanLevel; defaultPlanPeriod: string; open: boolean; onClose: () => void; onSaved: () => Promise<void> }) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<PlanFormValues>();
   const level = Form.useWatch('level', form) ?? plan?.level ?? defaultLevel;
   const status = Form.useWatch('status', form) ?? plan?.status ?? 'not_started';

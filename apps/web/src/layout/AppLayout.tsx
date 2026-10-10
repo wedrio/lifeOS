@@ -16,10 +16,12 @@ import {
   SunOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
 import { dataSource } from '../data';
 import { ParticlesBackground } from '../components/ui';
+import { useBackDismiss } from '../lib/backGuard';
+import { useAppNavigate } from '../lib/navigation';
 
 const { Sider, Header, Content } = Layout;
 
@@ -85,7 +87,7 @@ function sectionLabel(section: string) {
 }
 
 function NavigationMenu({ onNavigate }: { onNavigate?: () => void }) {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const location = useLocation();
   const section = activeSection(location.pathname);
   const activeGroup = ['growth', 'finance', 'life'].includes(section) ? section : undefined;
@@ -122,6 +124,7 @@ function MobileNavigation() {
           key={item.key}
           to={item.key}
           end={item.key === '/'}
+          replace
         >
           {item.icon}
           <span>{item.label}</span>
@@ -136,6 +139,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const setTheme = useUIStore((state) => state.setTheme);
   const mobileMenuOpen = useUIStore((state) => state.mobileMenuOpen);
   const setMobileMenuOpen = useUIStore((state) => state.setMobileMenuOpen);
+  useBackDismiss(mobileMenuOpen, () => setMobileMenuOpen(false));
   const location = useLocation();
   const currentItem = navigation.find((item) => item.key === activeKey(location.pathname)) ?? navigation[0];
   const currentSection = activeSection(location.pathname);

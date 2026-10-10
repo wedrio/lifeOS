@@ -4,6 +4,7 @@ import { BookOutlined, PlusOutlined } from '@ant-design/icons';
 import type { Book, BookCoverTheme, BookInput, BookStatus } from '@lifeos/shared';
 import { COVER_THEMES } from './BookCover';
 import { dataSource } from '../../data';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface BookEditModalProps {
   book?: Book | null;
@@ -17,6 +18,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 export function BookEditModal({ book, open, onClose, onSuccess }: BookEditModalProps) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<BookInput>();
   const [loading, setLoading] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<BookCoverTheme>('emerald');

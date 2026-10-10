@@ -4,6 +4,7 @@ import type { Asset, AssetInput, AssetKind, BillingCycle, PhysicalAssetStatus } 
 import { assetInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { fromCents, toCents } from '../../lib/finance';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface AssetFormValues {
   kind: AssetKind;
@@ -31,6 +32,7 @@ const subscriptionCategories = ['视频', '音乐', '云盘', '办公', '工具'
 const centsOrUndefined = (value?: number) => typeof value === 'number' ? toCents(value) : undefined;
 
 export function AssetFormModal({ asset, open, onClose, onSaved }: { asset?: Asset; open: boolean; onClose: () => void; onSaved: () => Promise<void> }) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<AssetFormValues>();
   const kind = Form.useWatch('kind', form) ?? asset?.kind ?? 'physical';
   const categoryOptions = kind === 'physical' ? physicalCategories : subscriptionCategories;

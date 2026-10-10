@@ -5,6 +5,7 @@ import type { Book } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { BookCover } from './BookCover';
 import { fireCelebrationCannon, fireConfetti } from '../ui';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface ReadingLogModalProps {
   book: Book | null;
@@ -22,6 +23,7 @@ interface FormValues {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function ReadingLogModal({ book, open, onClose, onSuccess }: ReadingLogModalProps) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<FormValues>();
   const [loading, setLoading] = useState(false);
   const [targetPage, setTargetPage] = useState<number>(0);

@@ -316,9 +316,13 @@ export interface SharePayload {
   text?: string;
   images?: string[];
 }
+export interface PickImagesOptions {
+  /** 移动端：true 表示直接调起相机拍照，否则从文件/相册选择。 */
+  capture?: boolean;
+}
 export interface PlatformCapabilities {
   notify(options: { title: string; body: string; at?: Date }): Promise<void>;
-  pickImages(max: number): Promise<Blob[]>;
+  pickImages(max: number, options?: PickImagesOptions): Promise<Blob[]>;
   saveFile(filename: string, blob: Blob): Promise<void>;
   share(content: SharePayload): Promise<void>;
   receiveShare(): Promise<SharePayload | null>;

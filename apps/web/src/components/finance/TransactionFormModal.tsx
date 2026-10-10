@@ -4,6 +4,7 @@ import type { Account, Category, Transaction, TransactionInput, TransactionType 
 import { transactionInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { currentDate, fromCents, toCents } from '../../lib/finance';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface TransactionFormValues {
   type: TransactionType;
@@ -26,6 +27,7 @@ interface TransactionFormModalProps {
 }
 
 export function TransactionFormModal({ open, transaction, categories, accounts, onClose, onSaved }: TransactionFormModalProps) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<TransactionFormValues>();
   const type = Form.useWatch('type', form) ?? transaction?.type ?? 'expense';
   const paidAccountId = Form.useWatch('accountId', form);

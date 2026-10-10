@@ -25,6 +25,7 @@ import { dataSource } from '../data';
 import { fromCents, toCents } from '../lib/finance';
 import { useUIStore, type ParticleDensity } from '../stores/uiStore';
 import { getPlatformCapabilities } from '../platform';
+import { useBackDismiss } from '../lib/backGuard';
 import { SpotlightCard } from '../components/ui';
 import '../styles/settings.css';
 
@@ -37,6 +38,7 @@ export function SettingsPage() {
   const [pendingImport, setPendingImport] = useState<BackupPayload | null>(null);
   const [importMode, setImportMode] = useState<BackupImportMode>('replace');
   const [importing, setImporting] = useState(false);
+  useBackDismiss(Boolean(pendingImport), () => setPendingImport(null));
   const inputRef = useRef<HTMLInputElement>(null);
   const [form] = Form.useForm<SettingsFormValues>();
   const setTheme = useUIStore((state) => state.setTheme);
