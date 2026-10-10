@@ -1,0 +1,68 @@
+# lifeOS 生产部署：db(pgvector) + api(Fastify) + web(静态) + caddy(HTTPS/反代)
+# 用法见 deploy/README.md；敏感配置全部从 deploy/.env.prod 注入，不落默认值
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lifeos
+      POSTGRES_USER: ${POSTGRES_USER:-lifeos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?need POSTGRES_PASSWORD}
+    volumes:
+      - lifeos-postgres-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lifeos} -d lifeos"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # 刻意不映射端口：数据库仅 compose 内网可达，公网无法直连
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lifeos}:${POSTGRES_PASSWORD}@db:5432/lifeos?schema=public
+      JWT_SECRET: ${JWT_SECRET:?need JWT_SECRET}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Shanghai}
+      NODE_ENV: production
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3000"
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?need SITE_ADDRESS}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
+
+volumes:
+  lifeos-postgres-prod:
+  caddy-data:
+  caddy-config:

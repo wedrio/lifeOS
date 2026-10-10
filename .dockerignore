@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+dist
+**/dist
+**/src-tauri/target
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.gitignore
+.idea
+.vscode
+coverage
+**/coverage
+backups
+apps/desktop
