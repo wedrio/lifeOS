@@ -6,6 +6,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1).default('postgresql://lifeos:lifeos_dev_password@localhost:5432/lifeos?schema=public'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET 至少需要 32 个字符').default('lifeos-development-secret-change-before-production'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  APP_TIMEZONE: z.string().default('Asia/Shanghai'),
 });
 
 export type AppConfig = {
@@ -14,6 +15,7 @@ export type AppConfig = {
   databaseUrl: string;
   jwtSecret: string;
   corsOrigins: string[];
+  timezone: string;
 };
 
 export function loadConfig(environment = process.env): AppConfig {
@@ -27,5 +29,6 @@ export function loadConfig(environment = process.env): AppConfig {
     databaseUrl: parsed.DATABASE_URL,
     jwtSecret: parsed.JWT_SECRET,
     corsOrigins: parsed.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean),
+    timezone: parsed.APP_TIMEZONE,
   };
 }
