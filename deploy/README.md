@@ -11,6 +11,19 @@
 
 > 无域名时可临时 `SITE_ADDRESS=:80` 走 HTTP（仅测试用）。
 
+### 0.1 国内服务器网络受限时的准备
+
+**Docker Hub 镜像加速**（拉 `caddy`/`node` 基础镜像用；`pgvector/pgvector:pg16` 服务器上已有可跳过）：
+
+```bash
+sudo tee /etc/docker/daemon.json <<'EOF'
+{ "registry-mirrors": ["https://mirror.ccs.tencentyun.com"] }
+EOF
+sudo systemctl restart docker
+```
+
+> 重启会短暂重启现有容器（`restart: unless-stopped` 的会自动拉起）。
+
 ## 1. 拉取代码
 
 私有仓库需要一个只读 Personal Access Token（GitHub → Settings → Developer settings → Tokens，勾 `repo`）：
@@ -23,6 +36,24 @@ cd lifeOS
 **分支选择**：数据库切片在 `feature/db-slice-habits`（基于 `feature/android-shell`）。
 推荐先把 PR #7 → #8 合并进 `main`，然后在服务器 `git checkout main && git pull`；
 急着部署也可以直接 `git checkout feature/db-slice-habits`。
+
+### 1a. 服务器访问 GitHub 受限时：本地打 bundle 上传
+
+```bash
+# 本地（Git Bash）
+git bundle create lifeos-main.bundle main
+scp lifeos-main.bundle root@<服务器IP>:/root/
+```
+
+```bash
+# 服务器
+git clone /root/lifeos-main.bundle lifeOS
+cd lifeOS
+git remote set-url origin https://github.com/wedrio/lifeOS.git   # 以后更新：再传 bundle 后 git fetch /root/lifeos-main.bundle main:main
+git checkout main
+```
+
+代码内已内置国内构建加速（Dockerfile 中 `npmmirror` 的 npm registry 与 Prisma 引擎镜像），构建期无需再配。
 
 ## 2. 配置
 
