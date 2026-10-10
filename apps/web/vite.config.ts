@@ -7,6 +7,8 @@ export default defineConfig({
   server: {
     // Arena previews are proxied through a dynamic e2b.app hostname.
     allowedHosts: true,
+    // /api 反代到本地 Fastify（同源，refresh httpOnly cookie 无跨站问题）
+    proxy: { '/api': { target: 'http://localhost:3000', changeOrigin: true } },
   },
   resolve: {
     alias: {
