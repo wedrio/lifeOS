@@ -5,6 +5,7 @@ import type { Habit, HabitInput } from '@lifeos/shared';
 import { habitInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { WEEKDAY_OPTIONS } from '../../lib/dates';
+import { useBackDismiss } from '../../lib/backGuard';
 
 const EMOJI_CHOICES = [
   '✨', '📚', '🏃', '💧', '🧘', '💪', '🦷', '🛏️',
@@ -50,6 +51,7 @@ interface HabitFormValues {
 }
 
 export function HabitFormModal({ habit, open, onClose, onSaved }: { habit?: Habit; open: boolean; onClose: () => void; onSaved: () => Promise<void> }) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<HabitFormValues>();
   const frequency = Form.useWatch('frequency', form) ?? habit?.frequency ?? 'daily';
 

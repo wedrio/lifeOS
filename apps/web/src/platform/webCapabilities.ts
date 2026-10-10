@@ -1,4 +1,5 @@
 import type { PlatformCapabilities, SharePayload } from '@lifeos/shared';
+import { pickImagesFromInput } from './pickImages';
 
 export const webCapabilities: PlatformCapabilities = {
   async notify({ title, body }) {
@@ -6,15 +7,8 @@ export const webCapabilities: PlatformCapabilities = {
     if (Notification.permission === 'default') await Notification.requestPermission();
     if (Notification.permission === 'granted') new Notification(title, { body });
   },
-  async pickImages(max) {
-    return new Promise<Blob[]>((resolve) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.multiple = max > 1;
-      input.onchange = () => resolve(Array.from(input.files ?? []).slice(0, max));
-      input.click();
-    });
+  async pickImages(max, options) {
+    return pickImagesFromInput(max, options);
   },
   async saveFile(filename, blob) {
     const url = URL.createObjectURL(blob);

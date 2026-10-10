@@ -5,6 +5,7 @@ import type { Account, AccountInput, Category, CategoryInput } from '@lifeos/sha
 import { accountInputSchema, categoryInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
 import { formatCents, fromCents, toCents } from '../../lib/finance';
+import { useBackDismiss } from '../../lib/backGuard';
 
 type CatalogKind = 'category' | 'account';
 
@@ -30,6 +31,7 @@ interface AccountFormValues {
 }
 
 export function FinanceCatalogDrawer({ open, onClose, onChanged }: FinanceCatalogDrawerProps) {
+  useBackDismiss(open, onClose);
   const [kind, setKind] = useState<CatalogKind>('category');
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -86,6 +88,7 @@ export function FinanceCatalogDrawer({ open, onClose, onChanged }: FinanceCatalo
 }
 
 function CategoryModal({ category, categories, onClose, onSaved }: { category?: Category; categories: Category[]; onClose: () => void; onSaved: () => Promise<void> }) {
+  useBackDismiss(true, onClose);
   const [form] = Form.useForm<CategoryFormValues>();
   const type = Form.useWatch('type', form) ?? category?.type ?? 'expense';
   useEffect(() => { form.setFieldsValue({ name: category?.name, icon: category?.icon ?? '🏷️', color: category?.color ?? '#2f9c67', type: category?.type ?? 'expense', parentId: category?.parentId }); }, [category, form]);
@@ -99,6 +102,7 @@ function CategoryModal({ category, categories, onClose, onSaved }: { category?: 
 }
 
 function AccountModal({ account, onClose, onSaved }: { account?: Account; onClose: () => void; onSaved: () => Promise<void> }) {
+  useBackDismiss(true, onClose);
   const [form] = Form.useForm<AccountFormValues>();
   useEffect(() => { form.setFieldsValue({ name: account?.name, icon: account?.icon ?? '💳', initialBalance: account ? fromCents(account.initialBalance) : 0, archived: account?.archived ?? false, kind: account?.kind ?? 'cash' }); }, [account, form]);
   const submit = async (values: AccountFormValues) => {

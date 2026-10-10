@@ -5,7 +5,7 @@ import type { Budget, BudgetInput, Category, FinanceStats, MealBudget, MealBudge
 import { budgetInputSchema } from '@lifeos/shared';
 import { dataSource } from '../data';
 import { currentMonth, formatCents, fromCents, toCents } from '../lib/finance';
-import { useNavigate } from 'react-router-dom';
+import { useAppNavigate } from '../lib/navigation';
 import '../styles/finance.css';
 
 interface BudgetFormValues {
@@ -29,7 +29,7 @@ export function BudgetPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<BudgetFormValues>();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   const load = useCallback(async () => {
     setLoading(true);

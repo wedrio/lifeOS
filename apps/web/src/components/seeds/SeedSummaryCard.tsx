@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Skeleton, Typography, message } from 'antd';
 import { RightOutlined } from '@ant-design/icons';
 import type { Seed } from '@lifeos/shared';
-import { useNavigate } from 'react-router-dom';
+import { useAppNavigate } from '../../lib/navigation';
 import { dataSource } from '../../data';
 import { today } from '../../lib/dates';
 import { KIND_META } from './SeedCard';
@@ -11,7 +11,7 @@ import { KIND_META } from './SeedCard';
 export function SeedSummaryCard() {
   const [seeds, setSeeds] = useState<Seed[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
 
   const reload = useCallback(async () => {
     setLoading(true);

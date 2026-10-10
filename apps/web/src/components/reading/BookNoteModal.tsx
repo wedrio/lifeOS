@@ -3,6 +3,7 @@ import { Button, Form, Input, InputNumber, Modal, Select, message } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import type { Book } from '@lifeos/shared';
 import { dataSource } from '../../data';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface BookNoteModalProps {
   book: Book | null;
@@ -19,6 +20,7 @@ interface FormValues {
 }
 
 export function BookNoteModal({ book, open, onClose, onSuccess }: BookNoteModalProps) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<FormValues>();
   const [loading, setLoading] = useState(false);
 

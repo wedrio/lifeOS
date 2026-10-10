@@ -28,6 +28,7 @@ import { BookCover } from './BookCover';
 import { ReadingLogModal } from './ReadingLogModal';
 import { BookNoteModal } from './BookNoteModal';
 import { BookEditModal } from './BookEditModal';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface BookDetailDrawerProps {
   bookId: string | null;
@@ -37,6 +38,7 @@ interface BookDetailDrawerProps {
 }
 
 export function BookDetailDrawer({ bookId, open, onClose, onChanged }: BookDetailDrawerProps) {
+  useBackDismiss(open, onClose);
   const [book, setBook] = useState<Book | null>(null);
   const [logs, setLogs] = useState<ReadingLog[]>([]);
   const [notes, setNotes] = useState<BookNote[]>([]);

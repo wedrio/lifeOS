@@ -4,6 +4,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import type { Seed, SeedEffort, SeedKind } from '@lifeos/shared';
 import { seedInputSchema } from '@lifeos/shared';
 import { dataSource } from '../../data';
+import { useBackDismiss } from '../../lib/backGuard';
 
 interface SeedFormValues { title: string; url?: string; kind: SeedKind; effort: SeedEffort; note?: string; }
 
@@ -21,6 +22,7 @@ const EFFORT_OPTIONS: Array<{ value: SeedEffort; label: string }> = [
 ];
 
 export function SeedFormModal({ seed, open, onClose, onSaved }: { seed?: Seed; open: boolean; onClose: () => void; onSaved: () => Promise<void> }) {
+  useBackDismiss(open, onClose);
   const [form] = Form.useForm<SeedFormValues>();
 
   useEffect(() => {
