@@ -93,7 +93,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get('/health', async () => health());
   app.get('/api/health', async () => health());
 
-  const auth = new AuthService(authRepository, (user) => app.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: '15m' }));
+  const auth = new AuthService(authRepository, (user) => app.jwt.sign({ sub: user.id, email: user.email }, { expiresIn: config.accessTokenTtl }));
   const settingsService = new SettingsService(settingsRepository, config.timezone);
   const habitService = new HabitService(habitRepository, settingsService);
   const statsService = new StatsService(statsRepository);
